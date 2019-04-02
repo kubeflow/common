@@ -154,3 +154,33 @@ const (
 	// - 128-255: retryable error, will restart the pod.
 	RestartPolicyExitCode RestartPolicy = "ExitCode"
 )
+
+// RunPolicy encapsulates various runtime policies of the distributed training
+// job, for example how to clean up resources and how long the job can stay
+// active.
+type RunPolicy struct {
+	// CleanPodPolicy defines the policy to kill pods after TFJob is
+	// succeeded.
+	// Default to Running.
+	CleanPodPolicy *CleanPodPolicy `json:"cleanPodPolicy,omitempty"`
+
+	// TTLSecondsAfterFinished is the TTL to clean up jobs (temporary
+	// before kubernetes adds the cleanup controller).
+	// It may take extra ReconcilePeriod seconds for the cleanup, since
+	// reconcile gets called periodically.
+	// Default to infinite.
+	TTLSecondsAfterFinished *int32 `json:"ttlSecondsAfterFinished,omitempty"`
+
+	// Specifies the duration in seconds relative to the startTime that the job may be active
+	// before the system tries to terminate it; value must be positive integer
+	// +optional
+	ActiveDeadlineSeconds *int64 `json:"activeDeadlineSeconds,omitempty"`
+
+	// Optional number of retries before marking this job failed.
+	// +optional
+	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
+
+        // TODO - Implement Scheduling policy.
+	// See https://github.com/kubeflow/tf-operator/issues/916#issuecomment-458729706
+        // SchedulingPolicy *SchedulingPolicy `json:"schedulingPolicy,omitempty"`
+}

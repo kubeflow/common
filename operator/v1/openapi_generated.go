@@ -200,6 +200,44 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/kubeflow/common/operator/v1.RunPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RunPolicy encapsulates various runtime policies of the distributed training job, for example how to clean up resources and how long the job can stay active.",
+					Properties: map[string]spec.Schema{
+						"cleanPodPolicy": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CleanPodPolicy defines the policy to kill pods after TFJob is succeeded. Default to Running.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ttlSecondsAfterFinished": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TTLSecondsAfterFinished is the TTL to clean up jobs (temporary before kubernetes adds the cleanup controller). It may take extra ReconcilePeriod seconds for the cleanup, since reconcile gets called periodically. Default to infinite.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"activeDeadlineSeconds": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
+						},
+						"backoffLimit": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Optional number of retries before marking this job failed.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
