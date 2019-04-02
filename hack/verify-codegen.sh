@@ -20,8 +20,8 @@ set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE}")/..
 
-DIFFROOT="${SCRIPT_ROOT}/pkg"
-TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/pkg"
+DIFFROOT="${SCRIPT_ROOT}/operator"
+TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/operator"
 _tmp="${SCRIPT_ROOT}/_tmp"
 
 cleanup() {
