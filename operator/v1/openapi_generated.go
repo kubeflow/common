@@ -207,21 +207,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"cleanPodPolicy": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CleanPodPolicy defines the policy to kill pods after TFJob is succeeded. Default to Running.",
+								Description: "CleanPodPolicy defines the policy to kill pods after the job completes. Default to Running.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"ttlSecondsAfterFinished": {
 							SchemaProps: spec.SchemaProps{
-								Description: "TTLSecondsAfterFinished is the TTL to clean up jobs (temporary before kubernetes adds the cleanup controller). It may take extra ReconcilePeriod seconds for the cleanup, since reconcile gets called periodically. Default to infinite.",
+								Description: "TTLSecondsAfterFinished is the TTL to clean up jobs. It may take extra ReconcilePeriod seconds for the cleanup, since reconcile gets called periodically. Default to infinite.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
 						},
 						"activeDeadlineSeconds": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer",
+								Description: "Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer.",
 								Type:        []string{"integer"},
 								Format:      "int64",
 							},
