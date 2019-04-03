@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"net/http"
 
-	tflogger "github.com/kubeflow/tf-operator/pkg/logger"
+	"github.com/kubeflow/common/util"
 	metav1unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,7 +30,7 @@ import (
 // The only exception is when the CRD spec is invalid and we can't parse the type into the corresponding
 // go struct.
 type CRDClient interface {
-	// Update a TfJob.
+	// Update a Job.
 	Update(obj *metav1unstructured.Unstructured) error
 }
 
@@ -66,7 +66,7 @@ func (c *CRDRestClient) Client() *http.Client {
 }
 
 func (c *CRDRestClient) Update(obj *metav1unstructured.Unstructured, plural string) error {
-	logger := tflogger.LoggerForUnstructured(obj, obj.GetKind())
+	logger := util.LoggerForUnstructured(obj, obj.GetKind())
 	// TODO(jlewi): Can we just call obj.GetKind() to get the kind? I think that will return the singular
 	// not plural will that work?
 	if plural == "" {
@@ -82,7 +82,7 @@ func (c *CRDRestClient) Update(obj *metav1unstructured.Unstructured, plural stri
 }
 
 func (c *CRDRestClient) UpdateStatus(obj *metav1unstructured.Unstructured, plural string) error {
-	logger := tflogger.LoggerForUnstructured(obj, obj.GetKind())
+	logger := util.LoggerForUnstructured(obj, obj.GetKind())
 	if plural == "" {
 		logger.Errorf("Could not issue update because plural not set.")
 		return fmt.Errorf("plural must be set")

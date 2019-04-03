@@ -32,7 +32,7 @@ import (
 	utiltesting "k8s.io/client-go/util/testing"
 	"k8s.io/kubernetes/pkg/api/testapi"
 
-	"github.com/kubeflow/tf-operator/pkg/common/util/v1beta2/testutil"
+	testutilv1 "github.com/kubeflow/common/test_util/v1"
 )
 
 func TestCreatePods(t *testing.T) {
@@ -51,21 +51,21 @@ func TestCreatePods(t *testing.T) {
 		Recorder:   &record.FakeRecorder{},
 	}
 
-	tfJob := testutil.NewTFJob(1, 0)
+	testJob := testutilv1.NewTestJob(1)
 
 	testName := "pod-name"
-	podTemplate := testutil.NewTFReplicaSpecTemplate()
+	podTemplate := testutilv1.NewTestReplicaSpecTemplate()
 	podTemplate.Name = testName
-	podTemplate.Labels = testutil.GenLabels(tfJob.Name)
+	podTemplate.Labels = testutilv1.GenLabels(testJob.Name)
 	podTemplate.SetOwnerReferences([]metav1.OwnerReference{})
 
 	// Make sure createReplica sends a POST to the apiserver with a pod from the controllers pod template
-	err := podControl.CreatePods(ns, &podTemplate, tfJob)
+	err := podControl.CreatePods(ns, &podTemplate, testJob)
 	assert.NoError(t, err, "unexpected error: %v", err)
 
 	expectedPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: testutil.GenLabels(tfJob.Name),
+			Labels: testutilv1.GenLabels(testJob.Name),
 			Name:   testName,
 		},
 		Spec: podTemplate.Spec,

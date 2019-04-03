@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	tfv1beta1 "github.com/kubeflow/tf-operator/pkg/apis/tensorflow/v1beta1"
-	"github.com/kubeflow/tf-operator/pkg/common/util/v1beta2/testutil"
+	testjobv1 "github.com/kubeflow/common/test_job/v1"
+	testutilv1 "github.com/kubeflow/common/test_util/v1"
 )
 
 func TestClaimServices(t *testing.T) {
@@ -37,31 +37,31 @@ func TestClaimServices(t *testing.T) {
 	}
 	var tests = []test{
 		func() test {
-			tfJob := testutil.NewTFJob(1, 0)
-			tfJobLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(tfJob.Name),
+			testJob := testutilv1.NewTestJob(1)
+			testJobLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(testJob.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
-			testService := testutil.NewBaseService("service2", tfJob, nil)
-			testService.Labels[testutil.LabelGroupName] = "testing"
+			testService := testutilv1.NewBaseService("service2", testJob, nil)
+			testService.Labels[testutilv1.LabelGroupName] = "testing"
 
 			return test{
 				name: "Claim services with correct label",
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
-					tfJob,
-					tfJobLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testJob,
+					testJobLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				services: []*v1.Service{testutil.NewBaseService("service1", tfJob, t), testService},
-				claimed:  []*v1.Service{testutil.NewBaseService("service1", tfJob, t)},
+				services: []*v1.Service{testutilv1.NewBaseService("service1", testJob, t), testService},
+				claimed:  []*v1.Service{testutilv1.NewBaseService("service1", testJob, t)},
 			}
 		}(),
 		func() test {
-			controller := testutil.NewTFJob(1, 0)
+			controller := testutilv1.NewTestJob(1)
 			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(controller.Name),
+				MatchLabels: testutilv1.GenLabels(controller.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -69,25 +69,25 @@ func TestClaimServices(t *testing.T) {
 			controller.UID = types.UID(controllerUID)
 			now := metav1.Now()
 			controller.DeletionTimestamp = &now
-			testService1 := testutil.NewBaseService("service1", controller, t)
+			testService1 := testutilv1.NewBaseService("service1", controller, t)
 			testService1.SetOwnerReferences([]metav1.OwnerReference{})
-			testService2 := testutil.NewBaseService("service2", controller, t)
+			testService2 := testutilv1.NewBaseService("service2", controller, t)
 			testService2.SetOwnerReferences([]metav1.OwnerReference{})
 			return test{
 				name: "Controller marked for deletion can not claim services",
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
 					controller,
 					controllerLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
 				services: []*v1.Service{testService1, testService2},
 				claimed:  nil,
 			}
 		}(),
 		func() test {
-			controller := testutil.NewTFJob(1, 0)
+			controller := testutilv1.NewTestJob(1)
 			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(controller.Name),
+				MatchLabels: testutilv1.GenLabels(controller.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -95,28 +95,28 @@ func TestClaimServices(t *testing.T) {
 			controller.UID = types.UID(controllerUID)
 			now := metav1.Now()
 			controller.DeletionTimestamp = &now
-			testService2 := testutil.NewBaseService("service2", controller, t)
+			testService2 := testutilv1.NewBaseService("service2", controller, t)
 			testService2.SetOwnerReferences([]metav1.OwnerReference{})
 			return test{
 				name: "Controller marked for deletion can not claim new services",
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
 					controller,
 					controllerLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				services: []*v1.Service{testutil.NewBaseService("service1", controller, t), testService2},
-				claimed:  []*v1.Service{testutil.NewBaseService("service1", controller, t)},
+				services: []*v1.Service{testutilv1.NewBaseService("service1", controller, t), testService2},
+				claimed:  []*v1.Service{testutilv1.NewBaseService("service1", controller, t)},
 			}
 		}(),
 		func() test {
-			controller := testutil.NewTFJob(1, 0)
+			controller := testutilv1.NewTestJob(1)
 			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(controller.Name),
+				MatchLabels: testutilv1.GenLabels(controller.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
-			controller2 := testutil.NewTFJob(1, 0)
+			controller2 := testutilv1.NewTestJob(1)
 			controller.UID = types.UID(controllerUID)
 			controller2.UID = types.UID("AAAAA")
 			return test{
@@ -124,46 +124,46 @@ func TestClaimServices(t *testing.T) {
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
 					controller,
 					controllerLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				services: []*v1.Service{testutil.NewBaseService("service1", controller, t), testutil.NewBaseService("service2", controller2, t)},
-				claimed:  []*v1.Service{testutil.NewBaseService("service1", controller, t)},
+				services: []*v1.Service{testutilv1.NewBaseService("service1", controller, t), testutilv1.NewBaseService("service2", controller2, t)},
+				claimed:  []*v1.Service{testutilv1.NewBaseService("service1", controller, t)},
 			}
 		}(),
 		func() test {
-			controller := testutil.NewTFJob(1, 0)
+			controller := testutilv1.NewTestJob(1)
 			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(controller.Name),
+				MatchLabels: testutilv1.GenLabels(controller.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 			controller.UID = types.UID(controllerUID)
-			testService2 := testutil.NewBaseService("service2", controller, t)
-			testService2.Labels[testutil.LabelGroupName] = "testing"
+			testService2 := testutilv1.NewBaseService("service2", controller, t)
+			testService2.Labels[testutilv1.LabelGroupName] = "testing"
 			return test{
 				name: "Controller releases claimed services when selector doesn't match",
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
 					controller,
 					controllerLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				services: []*v1.Service{testutil.NewBaseService("service1", controller, t), testService2},
-				claimed:  []*v1.Service{testutil.NewBaseService("service1", controller, t)},
+				services: []*v1.Service{testutilv1.NewBaseService("service1", controller, t), testService2},
+				claimed:  []*v1.Service{testutilv1.NewBaseService("service1", controller, t)},
 			}
 		}(),
 		func() test {
-			controller := testutil.NewTFJob(1, 0)
+			controller := testutilv1.NewTestJob(1)
 			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: testutil.GenLabels(controller.Name),
+				MatchLabels: testutilv1.GenLabels(controller.Name),
 			})
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 			controller.UID = types.UID(controllerUID)
-			testService1 := testutil.NewBaseService("service1", controller, t)
-			testService2 := testutil.NewBaseService("service2", controller, t)
-			testService2.Labels[testutil.LabelGroupName] = "testing"
+			testService1 := testutilv1.NewBaseService("service1", controller, t)
+			testService2 := testutilv1.NewBaseService("service2", controller, t)
+			testService2.Labels[testutilv1.LabelGroupName] = "testing"
 			now := metav1.Now()
 			testService1.DeletionTimestamp = &now
 			testService2.DeletionTimestamp = &now
@@ -173,7 +173,7 @@ func TestClaimServices(t *testing.T) {
 				manager: NewServiceControllerRefManager(&FakeServiceControl{},
 					controller,
 					controllerLabelSelector,
-					tfv1beta1.SchemeGroupVersionKind,
+					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
 				services: []*v1.Service{testService1, testService2},
 				claimed:  []*v1.Service{testService1},

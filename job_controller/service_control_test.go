@@ -30,7 +30,7 @@ import (
 	utiltesting "k8s.io/client-go/util/testing"
 	"k8s.io/kubernetes/pkg/api/testapi"
 
-	"github.com/kubeflow/tf-operator/pkg/common/util/v1beta2/testutil"
+	testutilv1 "github.com/kubeflow/common/test_util/v1"
 )
 
 func TestCreateService(t *testing.T) {
@@ -54,19 +54,19 @@ func TestCreateService(t *testing.T) {
 		Recorder:   &record.FakeRecorder{},
 	}
 
-	tfJob := testutil.NewTFJob(1, 0)
+	testJob := testutilv1.NewTestJob(1)
 
 	testName := "service-name"
-	service := testutil.NewBaseService(testName, tfJob, t)
+	service := testutilv1.NewBaseService(testName, testJob, t)
 	service.SetOwnerReferences([]metav1.OwnerReference{})
 
 	// Make sure createReplica sends a POST to the apiserver with a pod from the controllers pod template
-	err := serviceControl.CreateServices(ns, service, tfJob)
+	err := serviceControl.CreateServices(ns, service, testJob)
 	assert.NoError(t, err, "unexpected error: %v", err)
 
 	expectedService := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    testutil.GenLabels(tfJob.Name),
+			Labels:    testutilv1.GenLabels(testJob.Name),
 			Name:      testName,
 			Namespace: ns,
 		},
@@ -100,21 +100,21 @@ func TestCreateServicesWithControllerRef(t *testing.T) {
 		Recorder:   &record.FakeRecorder{},
 	}
 
-	tfJob := testutil.NewTFJob(1, 0)
+	testJob := testutilv1.NewTestJob(1)
 
 	testName := "service-name"
-	service := testutil.NewBaseService(testName, tfJob, t)
+	service := testutilv1.NewBaseService(testName, testJob, t)
 	service.SetOwnerReferences([]metav1.OwnerReference{})
 
-	ownerRef := testutil.GenOwnerReference(tfJob)
+	ownerRef := testutilv1.GenOwnerReference(testJob)
 
 	// Make sure createReplica sends a POST to the apiserver with a pod from the controllers pod template
-	err := serviceControl.CreateServicesWithControllerRef(ns, service, tfJob, ownerRef)
+	err := serviceControl.CreateServicesWithControllerRef(ns, service, testJob, ownerRef)
 	assert.NoError(t, err, "unexpected error: %v", err)
 
 	expectedService := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          testutil.GenLabels(tfJob.Name),
+			Labels:          testutilv1.GenLabels(testJob.Name),
 			Name:            testName,
 			Namespace:       ns,
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
