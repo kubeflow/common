@@ -22,7 +22,7 @@ script:
   # For now though we just run all tests in pkg.
   # And we can not use ** because goveralls uses filepath.Match
   # to match ignore files and it does not support it.
-  - goveralls -service=travis-ci -v -package ./pkg/... -ignore "client/*/*.go,client/*/*/*.go,client/*/*/*/*.go,client/*/*/*/*/*.go,client/*/*/*/*/*/*.go,client/*/*/*/*/*/*/*.go,testutil/*.go,test_job/*/zz_generated.*.go,test_job/*/*_generated.go,operator/*/zz_generated.*.go,operator/*/*_generated.go"
+  - goveralls -service=travis-ci -v -package ./... -ignore "client/*/*.go,client/*/*/*.go,client/*/*/*/*.go,client/*/*/*/*/*.go,client/*/*/*/*/*/*.go,client/*/*/*/*/*/*/*.go,testutil/*.go,test_job/*/zz_generated.*.go,test_job/*/*_generated.go,operator/*/zz_generated.*.go,operator/*/*_generated.go"
 
 notifications:
   webhooks: https://www.travisbuddy.com/
