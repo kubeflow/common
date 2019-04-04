@@ -31,5 +31,5 @@
     "test_job/v1/openapi_generated.go"
   ],
   "Deadline": "600s",
-  "Skip": ["pkg/client"]
+  "Skip": ["client"]
 }
