@@ -26,5 +26,18 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&TestJob{}, func(obj interface{}) { SetObjectDefaults_TestJob(obj.(*TestJob)) })
+	scheme.AddTypeDefaultingFunc(&TestJobList{}, func(obj interface{}) { SetObjectDefaults_TestJobList(obj.(*TestJobList)) })
 	return nil
+}
+
+func SetObjectDefaults_TestJob(in *TestJob) {
+	SetDefaults_TestJob(in)
+}
+
+func SetObjectDefaults_TestJobList(in *TestJobList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_TestJob(a)
+	}
 }

@@ -21,7 +21,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=tfjob
+// +resource:path=testjob
 
 // A generic job used for unit tests. 
 type TestJob struct {
@@ -30,10 +30,10 @@ type TestJob struct {
 	// Standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Specification of the desired behavior of the TFJob.
+	// Specification of the desired behavior of the TestJob.
 	Spec TestJobSpec `json:"spec,omitempty"`
 
-	// Most recently observed status of the TFJob.
+	// Most recently observed status of the TestJob.
 	// This data may not be up to date.
 	// Populated by the system.
 	// Read-only.
@@ -64,6 +64,6 @@ type TestJobList struct {
 	// Standard list metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	// List of TFJobs.
+	// List of TestJobs.
 	Items []TestJob `json:"items"`
 }

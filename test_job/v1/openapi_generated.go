@@ -57,13 +57,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"spec": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Specification of the desired behavior of the TFJob.",
+								Description: "Specification of the desired behavior of the TestJob.",
 								Ref:         ref("github.com/kubeflow/common/test_job/v1.TestJobSpec"),
 							},
 						},
 						"status": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Most recently observed status of the TFJob. This data may not be up to date. Populated by the system. Read-only.",
+								Description: "Most recently observed status of the TestJob. This data may not be up to date. Populated by the system. Read-only.",
 								Ref:         ref("github.com/kubeflow/common/operator/v1.JobStatus"),
 							},
 						},
@@ -100,7 +100,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"items": {
 							SchemaProps: spec.SchemaProps{
-								Description: "List of TFJobs.",
+								Description: "List of TestJobs.",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{

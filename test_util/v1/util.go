@@ -15,14 +15,12 @@
 package test_util
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
 	common "github.com/kubeflow/common/operator/v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
 
 	testjobv1 "github.com/kubeflow/common/test_job/v1"
@@ -60,20 +58,6 @@ func GenOwnerReference(testjob *testjobv1.TestJob) *metav1.OwnerReference {
 	}
 
 	return controllerRef
-}
-
-// ConvertTFJobToUnstructured uses JSON to convert TFJob to Unstructured.
-func ConvertTFJobToUnstructured(testJob *testjobv1.TestJob) (*unstructured.Unstructured, error) {
-	var unstructured unstructured.Unstructured
-	b, err := json.Marshal(testJob)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(b, &unstructured); err != nil {
-		return nil, err
-	}
-	return &unstructured, nil
 }
 
 func GetKey(testJob *testjobv1.TestJob, t *testing.T) string {

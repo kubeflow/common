@@ -16,8 +16,6 @@ package test_util
 
 import (
 	"time"
-
-	common "github.com/kubeflow/common/operator/v1"
 )
 
 const (
@@ -27,16 +25,6 @@ const (
 
 	SleepInterval = 500 * time.Millisecond
 	ThreadCount   = 1
-
-	// DefaultPortName is name of the port used to communicate between PS and
-	// workers.
-	DefaultPortName = "tfjob-port"
-	// DefaultContainerName is the name of the TFJob container.
-	DefaultContainerName = "tensorflow"
-	// DefaultPort is default value of the port.
-	DefaultPort = 2222
-	// DefaultRestartPolicy is default RestartPolicy for TFReplicaSpec.
-	DefaultRestartPolicy = common.RestartPolicyNever
 )
 
 var (

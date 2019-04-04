@@ -47,7 +47,6 @@ func (jc *JobController) AddPod(obj interface{}) {
 		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
 
 		if job == nil {
-			// If this is a TFJob pod
 			if pod.Labels[jc.Controller.GetGroupNameLabelKey()] == jc.Controller.GetGroupNameLabelValue() {
 				logger.Info("This pod's job does not exist")
 			}
@@ -77,7 +76,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 
 }
 
-// When a pod is updated, figure out what tfjob/s manage it and wake them up.
+// When a pod is updated, figure out what job is managing it and wake it up.
 // If the labels of the pod have changed we need to awaken both the old
 // and new replica set. old and cur must be *v1.Pod types.
 func (jc *JobController) UpdatePod(old, cur interface{}) {

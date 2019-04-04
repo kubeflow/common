@@ -53,7 +53,7 @@ func NewPod(testJob *testjobv1.TestJob, typ string, index int, t *testing.T) *v1
 	return pod
 }
 
-// create count pods with the given phase for the given tfJob
+// create count pods with the given phase for the given testjob
 func NewPodList(count int32, status v1.PodPhase, testJob *testjobv1.TestJob, typ string, start int32, t *testing.T) []*v1.Pod {
 	pods := []*v1.Pod{}
 	for i := int32(0); i < count; i++ {

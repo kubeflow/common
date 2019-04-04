@@ -22,11 +22,10 @@ const (
 	// EnvKubeflowNamespace is ENV for kubeflow namespace specified by user.
 	EnvKubeflowNamespace = "KUBEFLOW_NAMESPACE"
 
-	// DefaultPortName is name of the port used to communicate between PS and
-	// workers.
+	// DefaultPortName is name of the port used to communicate between workers.
 	DefaultPortName = "job-port"
 	// DefaultContainerName is the name of the TestJob container.
-	DefaultContainerName = "tensorflow"
+	DefaultContainerName = "test-container"
 	// DefaultPort is default value of the port.
 	DefaultPort = 2222
 	// DefaultRestartPolicy is default RestartPolicy for TFReplicaSpec.
