@@ -30,213 +30,122 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/kubeflow/common/operator/v1.JobCondition": {
+		"github.com/kubeflow/common/test_job/v1.TestJob": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "JobCondition describes the state of the job at a certain point.",
+					Description: "A generic job used for unit tests.",
 					Properties: map[string]spec.Schema{
-						"type": {
+						"kind": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Type of job condition.",
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
 								Type:        []string{"string"},
 								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the desired behavior of the TestJob.",
+								Ref:         ref("github.com/kubeflow/common/test_job/v1.TestJobSpec"),
 							},
 						},
 						"status": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Status of the condition, one of True, False, Unknown.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"reason": {
-							SchemaProps: spec.SchemaProps{
-								Description: "The reason for the condition's last transition.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"message": {
-							SchemaProps: spec.SchemaProps{
-								Description: "A human readable message indicating details about the transition.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"lastUpdateTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "The last time this condition was updated.",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-							},
-						},
-						"lastTransitionTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Last time the condition transitioned from one status to another.",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+								Description: "Most recently observed status of the TestJob. This data may not be up to date. Populated by the system. Read-only.",
+								Ref:         ref("github.com/kubeflow/common/operator/v1.JobStatus"),
 							},
 						},
 					},
-					Required: []string{"type", "status"},
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+				"github.com/kubeflow/common/operator/v1.JobStatus", "github.com/kubeflow/common/test_job/v1.TestJobSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		"github.com/kubeflow/common/operator/v1.JobStatus": {
+		"github.com/kubeflow/common/test_job/v1.TestJobList": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "JobStatus represents the current observed state of the training Job.",
+					Description: "TestJobList is a list of TestJobs.",
 					Properties: map[string]spec.Schema{
-						"conditions": {
+						"kind": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Conditions is an array of current observed job conditions.",
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard list metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of TestJobs.",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/kubeflow/common/operator/v1.JobCondition"),
+											Ref: ref("github.com/kubeflow/common/test_job/v1.TestJob"),
 										},
 									},
 								},
 							},
 						},
-						"replicaStatuses": {
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/kubeflow/common/test_job/v1.TestJob", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/kubeflow/common/test_job/v1.TestJobSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "TestJobSpec is a desired state description of the TestJob.",
+					Properties: map[string]spec.Schema{
+						"runPolicy": {
 							SchemaProps: spec.SchemaProps{
-								Description: "ReplicaStatuses is map of ReplicaType and ReplicaStatus, specifies the status of each replica.",
-								Type:        []string{"object"},
+								Ref: ref("github.com/kubeflow/common/operator/v1.RunPolicy"),
+							},
+						},
+						"testReplicaSpecs": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"object"},
 								AdditionalProperties: &spec.SchemaOrBool{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/kubeflow/common/operator/v1.ReplicaStatus"),
+											Ref: ref("github.com/kubeflow/common/operator/v1.ReplicaSpec"),
 										},
 									},
 								},
 							},
 						},
-						"startTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Represents time when the job was acknowledged by the job controller. It is not guaranteed to be set in happens-before order across separate operations. It is represented in RFC3339 form and is in UTC.",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-							},
-						},
-						"completionTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Represents time when the job was completed. It is not guaranteed to be set in happens-before order across separate operations. It is represented in RFC3339 form and is in UTC.",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-							},
-						},
-						"lastReconcileTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Represents last time when the job was reconciled. It is not guaranteed to be set in happens-before order across separate operations. It is represented in RFC3339 form and is in UTC.",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-							},
-						},
 					},
-					Required: []string{"conditions", "replicaStatuses"},
+					Required: []string{"testReplicaSpecs"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/kubeflow/common/operator/v1.JobCondition", "github.com/kubeflow/common/operator/v1.ReplicaStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-		},
-		"github.com/kubeflow/common/operator/v1.ReplicaSpec": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "ReplicaSpec is a description of the replica",
-					Properties: map[string]spec.Schema{
-						"replicas": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Replicas is the desired number of replicas of the given template. If unspecified, defaults to 1.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-						"template": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Template is the object that describes the pod that will be created for this replica. RestartPolicy in PodTemplateSpec will be overide by RestartPolicy in ReplicaSpec",
-								Ref:         ref("k8s.io/api/core/v1.PodTemplateSpec"),
-							},
-						},
-						"restartPolicy": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Restart policy for all replicas within the job. One of Always, OnFailure, Never and ExitCode. Default to Never.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-					},
-				},
-			},
-			Dependencies: []string{
-				"k8s.io/api/core/v1.PodTemplateSpec"},
-		},
-		"github.com/kubeflow/common/operator/v1.ReplicaStatus": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "ReplicaStatus represents the current observed state of the replica.",
-					Properties: map[string]spec.Schema{
-						"active": {
-							SchemaProps: spec.SchemaProps{
-								Description: "The number of actively running pods.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-						"succeeded": {
-							SchemaProps: spec.SchemaProps{
-								Description: "The number of pods which reached phase Succeeded.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-						"failed": {
-							SchemaProps: spec.SchemaProps{
-								Description: "The number of pods which reached phase Failed.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-					},
-				},
-			},
-			Dependencies: []string{},
-		},
-		"github.com/kubeflow/common/operator/v1.RunPolicy": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "RunPolicy encapsulates various runtime policies of the distributed training job, for example how to clean up resources and how long the job can stay active.",
-					Properties: map[string]spec.Schema{
-						"cleanPodPolicy": {
-							SchemaProps: spec.SchemaProps{
-								Description: "CleanPodPolicy defines the policy to kill pods after the job completes. Default to Running.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"ttlSecondsAfterFinished": {
-							SchemaProps: spec.SchemaProps{
-								Description: "TTLSecondsAfterFinished is the TTL to clean up jobs. It may take extra ReconcilePeriod seconds for the cleanup, since reconcile gets called periodically. Default to infinite.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-						"activeDeadlineSeconds": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer.",
-								Type:        []string{"integer"},
-								Format:      "int64",
-							},
-						},
-						"backoffLimit": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Optional number of retries before marking this job failed.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
-					},
-				},
-			},
-			Dependencies: []string{},
+				"github.com/kubeflow/common/operator/v1.ReplicaSpec", "github.com/kubeflow/common/operator/v1.RunPolicy"},
 		},
 		"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource": {
 			Schema: spec.Schema{
