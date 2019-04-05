@@ -1,6 +1,6 @@
 # common
 
-[![Build Status](https://travis-ci.org/kubeflow/common.svg?branch=master)](https://travis-ci.org/kubeflow/common)
+[![Build Status](https://travis-ci.com/kubeflow/common.svg?branch=master)](https://travis-ci.com/kubeflow/common/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubeflow/common)](https://goreportcard.com/report/github.com/kubeflow/common)
 
 Common APIs and libraries shared by other Kubeflow operator repositories.
