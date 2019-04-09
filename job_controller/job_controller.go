@@ -73,6 +73,23 @@ type ControllerInterface interface {
 
 	// Returns the Job from API server
 	GetJobFromAPIClient(namespace, name string) (metav1.Object, error)
+
+	// DeleteJobHandler deletes the job
+	DeleteJobHandler(job interface{}) error
+
+	// UpdateJobStatusHandler updates the job status
+	UpdateJobStatusHandler(job interface{}) error
+
+	// CreateServiceHandler creates the service
+	CreateServiceHandler(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
+
+	// ReconcilePods reconciles the pods for the job
+	ReconcilePods(
+		job metav1.Object,
+		pods []*v1.Pod,
+		rtype commonv1.ReplicaType,
+		spec *commonv1.ReplicaSpec,
+		rstatus map[string]v1.PodPhase) error
 }
 
 // JobControllerConfiguration contains configuration of operator.
@@ -147,22 +164,6 @@ type JobController struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	Recorder record.EventRecorder
-
-	// deleteJobHandler deletes the job
-	deleteJobHandler func(job interface{}) error
-
-	// updateJobStatusHandler updates the job status
-	updateJobStatusHandler func(job interface{}) error
-
-	// createServiceHandler creates the service
-	createServiceHandler func(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
-
-	// reconcilePods reconciles the pods for the job
-	reconcilePods func(
-		job metav1.Object,
-		pods []*v1.Pod,
-		rtype commonv1.ReplicaType,
-		spec *commonv1.ReplicaSpec, rstatus map[string]v1.PodPhase) error
 }
 
 func NewJobController(
@@ -466,7 +467,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 				jobStatus.ReplicaStatuses[rtype].Active = 0
 			}
 		}
-		return jc.updateJobStatusHandler(job)
+		return jc.Controller.UpdateJobStatusHandler(job)
 	}
 
 	// Save the current state of the replicas
@@ -474,13 +475,13 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 
 	// Diff current active pods/services with replicas.
 	for rtype, spec := range replicas {
-		err = jc.reconcilePods(metaObject, pods, rtype, spec, replicasStatus)
+		err = jc.Controller.ReconcilePods(metaObject, pods, rtype, spec, replicasStatus)
 		if err != nil {
 			log.Warnf("reconcilePods error %v", err)
 			return err
 		}
 
-		err = jc.reconcileServices(metaObject, services, rtype, spec, jc.createServiceHandler)
+		err = jc.reconcileServices(metaObject, services, rtype, spec)
 
 		if err != nil {
 			log.Warnf("reconcileServices error %v", err)
@@ -490,7 +491,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 
 	// no need to update the tfjob if the status hasn't changed since last time.
 	if !reflect.DeepEqual(*oldStatus, jobStatus) {
-		return jc.updateJobStatusHandler(job)
+		return jc.Controller.UpdateJobStatusHandler(job)
 	}
 	return nil
 }

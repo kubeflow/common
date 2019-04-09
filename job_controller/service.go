@@ -166,8 +166,7 @@ func (tc *JobController) reconcileServices(
 	job metav1.Object,
 	services []*v1.Service,
 	rtype commonv1.ReplicaType,
-	spec *commonv1.ReplicaSpec,
-	createServiceHandler func(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error) error {
+	spec *commonv1.ReplicaSpec) error {
 
 	// Convert ReplicaType to lower string.
 	rt := strings.ToLower(string(rtype))
@@ -187,7 +186,7 @@ func (tc *JobController) reconcileServices(
 			// TODO(gaocegege): Kill some services.
 		} else if len(serviceSlice) == 0 {
 			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
-			err = createServiceHandler(job, rtype, spec, strconv.Itoa(index))
+			err = tc.Controller.CreateServiceHandler(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
 			}
