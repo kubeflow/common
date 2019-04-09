@@ -3,7 +3,13 @@ package job_controller
 import (
 	"errors"
 	"fmt"
+	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util/k8sutil"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"reflect"
 	"strings"
+	"time"
 
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
@@ -23,6 +29,13 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/kubernetes/pkg/controller"
+)
+
+var (
+	// KeyFunc is the short name to DeletionHandlingMetaNamespaceKeyFunc.
+	// IndexerInformer uses a delta queue, therefore for deletes we have to use this
+	// key function but it should be just fine for non delete events.
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
 
 // Common Interface to be implemented by all operators.
@@ -134,6 +147,22 @@ type JobController struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	Recorder record.EventRecorder
+
+	// deleteJobHandler deletes the job
+	deleteJobHandler func(job interface{}) error
+
+	// updateJobStatusHandler updates the job status
+	updateJobStatusHandler func(job interface{}) error
+
+	// createServiceHandler creates the service
+	createServiceHandler func(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
+
+	// reconcilePods reconciles the pods for the job
+	reconcilePods func(
+		job metav1.Object,
+		pods []*v1.Pod,
+		rtype commonv1.ReplicaType,
+		spec *commonv1.ReplicaSpec, rstatus map[string]v1.PodPhase) error
 }
 
 func NewJobController(
@@ -319,4 +348,202 @@ func (jc *JobController) resolveControllerRef(namespace string, controllerRef *m
 		return nil
 	}
 	return job
+}
+
+// reconcileJobs checks and updates replicas for each given ReplicaSpec.
+// It will requeue the job in case of an error while creating/deleting pods/services.
+func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
+	jobStatus commonv1.JobStatus, runPolicy *commonv1.RunPolicy) error {
+	metaObject, ok := job.(metav1.Object)
+	jobName := metaObject.GetName()
+	if !ok {
+		return fmt.Errorf("job is not a metav1.Object type")
+	}
+	runtimeObject, ok := job.(runtime.Object)
+	if !ok {
+		return fmt.Errorf("job is not a runtime.Object type")
+	}
+	jobKey, err := KeyFunc(job)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
+		return err
+	}
+	log.Infof("Reconcile Jobs %s", metaObject.GetName())
+
+	oldStatus := jobStatus.DeepCopy()
+
+	pods, err := jc.GetPodsForJob(metaObject)
+
+	if err != nil {
+		log.Warnf("getPodsForJob error %v", err)
+		return err
+	}
+
+	services, err := jc.GetServicesForJob(metaObject)
+
+	if err != nil {
+		log.Warnf("getServicesForJob error %v", err)
+		return err
+	}
+
+	// retrieve the previous number of retry
+	previousRetry := jc.WorkQueue.NumRequeues(jobKey)
+
+	activePods := k8sutil.FilterActivePods(pods)
+	active := int32(len(activePods))
+	failed := k8sutil.FilterPodCount(pods, v1.PodFailed)
+	totalReplicas := k8sutil.GetTotalReplicas(replicas)
+	prevReplicasFailedNum := k8sutil.GetTotalFailedReplicas(jobStatus.ReplicaStatuses)
+
+	var failureMessage string
+	jobExceedsLimit := false
+	exceedsBackoffLimit := false
+	pastBackoffLimit := false
+
+	if runPolicy.BackoffLimit != nil {
+		jobHasNewFailure := failed > prevReplicasFailedNum
+		// new failures happen when status does not reflect the failures and active
+		// is different than parallelism, otherwise the previous controller loop
+		// failed updating status so even if we pick up failure it is not a new one
+		exceedsBackoffLimit = jobHasNewFailure && (active != totalReplicas) &&
+			(int32(previousRetry)+1 > *runPolicy.BackoffLimit)
+
+		pastBackoffLimit, err = jc.pastBackoffLimit(jobName, runPolicy, replicas, pods)
+		if err != nil {
+			return err
+		}
+	}
+
+	if exceedsBackoffLimit || pastBackoffLimit {
+		// check if the number of pod restart exceeds backoff (for restart OnFailure only)
+		// OR if the number of failed jobs increased since the last syncJob
+		jobExceedsLimit = true
+		failureMessage = fmt.Sprintf("Job %s has failed because it has reached the specified backoff limit", jobName)
+	} else if jc.pastActiveDeadline(runPolicy, jobStatus) {
+		failureMessage = fmt.Sprintf("Job %s has failed because it was active longer than specified deadline", jobName)
+		jobExceedsLimit = true
+	}
+
+	// If the TFJob is terminated, delete all pods and services.
+	if isSucceeded(jobStatus) || isFailed(jobStatus) || jobExceedsLimit {
+		if err := jc.deletePodsAndServices(runPolicy, &runtimeObject, pods); err != nil {
+			return err
+		}
+
+		if err := jc.cleanupJob(runPolicy, jobStatus, &runtimeObject); err != nil {
+			return err
+		}
+
+		if jc.Config.EnableGangScheduling {
+			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job is terminated, deleting PodGroup")
+			if err := jc.DeletePodGroup(metaObject); err != nil {
+				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
+				return err
+			} else {
+				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted pdb: %v", jobName)
+
+			}
+		}
+
+		if jobExceedsLimit {
+			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, JobFailedReason, failureMessage)
+			if jobStatus.CompletionTime == nil {
+				now := metav1.Now()
+				jobStatus.CompletionTime = &now
+			}
+			err := updateJobConditions(&jobStatus, commonv1.JobFailed, JobFailedReason, failureMessage)
+			if err != nil {
+				log.Infof("Append job condition error: %v", err)
+				return err
+			}
+		}
+
+		// At this point the pods may have been deleted, so if the job succeeded, we need to manually set the replica status.
+		// If any replicas are still Active, set their status to succeeded.
+		if isSucceeded(jobStatus) {
+			for rtype := range jobStatus.ReplicaStatuses {
+				jobStatus.ReplicaStatuses[rtype].Succeeded += jobStatus.ReplicaStatuses[rtype].Active
+				jobStatus.ReplicaStatuses[rtype].Active = 0
+			}
+		}
+		return jc.updateJobStatusHandler(job)
+	}
+
+	// Save the current state of the replicas
+	replicasStatus := make(map[string]v1.PodPhase)
+
+	// Diff current active pods/services with replicas.
+	for rtype, spec := range replicas {
+		err = jc.reconcilePods(metaObject, pods, rtype, spec, replicasStatus)
+		if err != nil {
+			log.Warnf("reconcilePods error %v", err)
+			return err
+		}
+
+		err = jc.reconcileServices(metaObject, services, rtype, spec, jc.createServiceHandler)
+
+		if err != nil {
+			log.Warnf("reconcileServices error %v", err)
+			return err
+		}
+	}
+
+	// no need to update the tfjob if the status hasn't changed since last time.
+	if !reflect.DeepEqual(*oldStatus, jobStatus) {
+		return jc.updateJobStatusHandler(job)
+	}
+	return nil
+}
+
+// pastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
+func (jc *JobController) pastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus commonv1.JobStatus) bool {
+	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil {
+		return false
+	}
+	now := metav1.Now()
+	start := jobStatus.StartTime.Time
+	duration := now.Time.Sub(start)
+	allowedDuration := time.Duration(*runPolicy.ActiveDeadlineSeconds) * time.Second
+	return duration >= allowedDuration
+}
+
+// pastBackoffLimitOnFailure checks if container restartCounts sum exceeds BackoffLimit
+// this method applies only to pods with restartPolicy == OnFailure or Always
+func (jc *JobController) pastBackoffLimit(jobName string, runPolicy *commonv1.RunPolicy,
+	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
+	if runPolicy.BackoffLimit == nil {
+		return false, nil
+	}
+	result := int32(0)
+	for rtype, spec := range replicas {
+		if spec.RestartPolicy != commonv1.RestartPolicyOnFailure && spec.RestartPolicy != commonv1.RestartPolicyAlways {
+			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure or Always. Not counted in backoff limit.", rtype, jobName)
+			continue
+		}
+		// Convert ReplicaType to lower string.
+		rt := strings.ToLower(string(rtype))
+		pods, err := jc.FilterPodsForReplicaType(pods, rt)
+		if err != nil {
+			return false, err
+		}
+		for i := range pods {
+			po := pods[i]
+			if po.Status.Phase != v1.PodRunning {
+				continue
+			}
+			for j := range po.Status.InitContainerStatuses {
+				stat := po.Status.InitContainerStatuses[j]
+				result += stat.RestartCount
+			}
+			for j := range po.Status.ContainerStatuses {
+				stat := po.Status.ContainerStatuses[j]
+				result += stat.RestartCount
+			}
+		}
+	}
+
+	if *runPolicy.BackoffLimit == 0 {
+		return result > 0, nil
+	}
+	return result >= *runPolicy.BackoffLimit, nil
 }

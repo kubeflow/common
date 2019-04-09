@@ -15,13 +15,15 @@ package job_controller
 
 import (
 	"fmt"
-	"strconv"
-
+	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/kubernetes/pkg/controller"
+	"strconv"
+	"strings"
 )
 
 // When a service is created, enqueue the controller that manages it and update its expectations.
@@ -156,4 +158,41 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 		}
 	}
 	return serviceSlices
+}
+
+// reconcileServices checks and updates services for each given ReplicaSpec.
+// It will requeue the job in case of an error while creating/deleting services.
+func (tc *JobController) reconcileServices(
+	job metav1.Object,
+	services []*v1.Service,
+	rtype commonv1.ReplicaType,
+	spec *commonv1.ReplicaSpec,
+	createServiceHandler func(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error) error {
+
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+
+	replicas := int(*spec.Replicas)
+	// Get all services for the type rt.
+	services, err := tc.FilterServicesForReplicaType(services, rt)
+	if err != nil {
+		return err
+	}
+
+	serviceSlices := tc.GetServiceSlices(services, replicas, util.LoggerForReplica(job, rt))
+
+	for index, serviceSlice := range serviceSlices {
+		if len(serviceSlice) > 1 {
+			util.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
+			// TODO(gaocegege): Kill some services.
+		} else if len(serviceSlice) == 0 {
+			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
+			err = createServiceHandler(job, rtype, spec, strconv.Itoa(index))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

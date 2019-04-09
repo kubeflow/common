@@ -15,6 +15,7 @@
 package k8sutil
 
 import (
+	commonv1 "github.com/kubeflow/common/operator/v1"
 	"net"
 	"os"
 
@@ -120,4 +121,20 @@ func FilterPodCount(pods []*v1.Pod, phase v1.PodPhase) int32 {
 		}
 	}
 	return result
+}
+
+func GetTotalReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) int32 {
+	tfjobReplicas := int32(0)
+	for _, r := range replicas {
+		tfjobReplicas += *r.Replicas
+	}
+	return tfjobReplicas
+}
+
+func GetTotalFailedReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaStatus) int32 {
+	totalFailedReplicas := int32(0)
+	for _, status := range replicas {
+		totalFailedReplicas += status.Failed
+	}
+	return totalFailedReplicas
 }
