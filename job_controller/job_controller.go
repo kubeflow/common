@@ -74,14 +74,14 @@ type ControllerInterface interface {
 	// Returns the Job from API server
 	GetJobFromAPIClient(namespace, name string) (metav1.Object, error)
 
-	// DeleteJobHandler deletes the job
-	DeleteJobHandler(job interface{}) error
+	// DeleteJob deletes the job
+	DeleteJob(job interface{}) error
 
-	// UpdateJobStatusHandler updates the job status
-	UpdateJobStatusHandler(job interface{}) error
+	// UpdateJobStatus updates the job status
+	UpdateJobStatus(job interface{}) error
 
-	// CreateServiceHandler creates the service
-	CreateServiceHandler(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
+	// CreateService creates the service
+	CreateService(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
 
 	// ReconcilePods reconciles the pods for the job
 	ReconcilePods(
@@ -467,7 +467,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 				jobStatus.ReplicaStatuses[rtype].Active = 0
 			}
 		}
-		return jc.Controller.UpdateJobStatusHandler(job)
+		return jc.Controller.UpdateJobStatus(job)
 	}
 
 	// Save the current state of the replicas
@@ -491,7 +491,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 
 	// no need to update the tfjob if the status hasn't changed since last time.
 	if !reflect.DeepEqual(*oldStatus, jobStatus) {
-		return jc.Controller.UpdateJobStatusHandler(job)
+		return jc.Controller.UpdateJobStatus(job)
 	}
 	return nil
 }

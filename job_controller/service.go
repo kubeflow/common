@@ -186,7 +186,7 @@ func (tc *JobController) reconcileServices(
 			// TODO(gaocegege): Kill some services.
 		} else if len(serviceSlice) == 0 {
 			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
-			err = tc.Controller.CreateServiceHandler(job, rtype, spec, strconv.Itoa(index))
+			err = tc.Controller.CreateService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
 			}

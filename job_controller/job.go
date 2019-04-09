@@ -42,7 +42,7 @@ func (jc *JobController) cleanupJob(runPolicy *common.RunPolicy, jobStatus commo
 	}
 	duration := time.Second * time.Duration(*ttl)
 	if currentTime.After(jobStatus.CompletionTime.Add(duration)) {
-		err := jc.Controller.DeleteJobHandler(job)
+		err := jc.Controller.DeleteJob(job)
 		if err != nil {
 			log.Warnf("Cleanup Job error: %v.", err)
 			return err
