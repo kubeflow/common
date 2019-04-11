@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	common "github.com/kubeflow/common/operator/v1"
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
@@ -60,6 +61,27 @@ type ControllerInterface interface {
 
 	// Returns the Job from API server
 	GetJobFromAPIClient(namespace, name string) (metav1.Object, error)
+
+	// DeleteJob deletes the job
+	DeleteJob(job interface{}) error
+
+	// UpdateJobStatus updates the job status and job conditions
+	UpdateJobStatus(job interface{}, replicas map[common.ReplicaType]*common.ReplicaSpec, jobStatus common.JobStatus) error
+
+	// CreateService creates the service
+	CreateService(job interface{}, service *v1.Service) error
+
+	// DeleteService deletes the service
+	DeleteService(job interface{}, service *v1.Service) error
+
+	// CreatePod creates the pod
+	CreatePod(job interface{}, podTemplate *v1.PodTemplate) error
+
+	// DeletePod deletes the pod
+	DeletePod(job interface{}, pod *v1.Pod) error
+
+	// SetClusterSpec sets the cluster spec for the pod
+	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplate, rtype, index string) error
 }
 
 // JobControllerConfiguration contains configuration of operator.
