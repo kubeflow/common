@@ -17,6 +17,13 @@ const (
 	JobFailedReason = "JobFailed"
 	// JobRestarting is added in a job when it is restarting.
 	JobRestartingReason = "JobRestarting"
+
+	// labels for pods and servers.
+	ReplicaTypeLabel  = "replica-type"
+	ReplicaIndexLabel = "replica-index"
+	labelGroupName      = "group-name"
+	labelJobName      = "job-name"
+	labelJobRole      = "job-role"
 )
 
 func isSucceeded(status common.JobStatus) bool {
@@ -41,6 +48,29 @@ func updateJobConditions(jobStatus *common.JobStatus, conditionType common.JobCo
 	setCondition(jobStatus, condition)
 	return nil
 }
+
+// initializeReplicaStatuses initializes the ReplicaStatuses for replica.
+func initializeReplicaStatuses(jobStatus *common.JobStatus, rtype common.ReplicaType) {
+	commonType := common.ReplicaType(rtype)
+	if jobStatus.ReplicaStatuses == nil {
+		jobStatus.ReplicaStatuses = make(map[common.ReplicaType]*common.ReplicaStatus)
+	}
+
+	jobStatus.ReplicaStatuses[commonType] = &common.ReplicaStatus{}
+}
+
+// updateJobReplicaStatuses updates the JobReplicaStatuses according to the pod.
+func updateJobReplicaStatuses(jobStatus *common.JobStatus, rtype common.ReplicaType, pod *v1.Pod) {
+	switch pod.Status.Phase {
+	case v1.PodRunning:
+		jobStatus.ReplicaStatuses[rtype].Active++
+	case v1.PodSucceeded:
+		jobStatus.ReplicaStatuses[rtype].Succeeded++
+	case v1.PodFailed:
+		jobStatus.ReplicaStatuses[rtype].Failed++
+	}
+}
+
 
 // newCondition creates a new job condition.
 func newCondition(conditionType common.JobConditionType, reason, message string) common.JobCondition {

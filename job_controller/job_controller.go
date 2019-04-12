@@ -3,14 +3,12 @@ package job_controller
 import (
 	"errors"
 	"fmt"
-	commonv1 "github.com/kubeflow/common/operator/v1"
-	"github.com/kubeflow/common/util/k8sutil"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"reflect"
 	"strings"
 	"time"
 
+	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util/k8sutil"
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
@@ -18,8 +16,10 @@ import (
 	"k8s.io/api/policy/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -74,22 +74,41 @@ type ControllerInterface interface {
 	// Returns the Job from API server
 	GetJobFromAPIClient(namespace, name string) (metav1.Object, error)
 
+	// Returns the default container in pod. e.g. tensorflow
+	GetDefaultContainerName() string
+
+	// Returns the default container port name. e.g. tfjob-port
+	GetDefaultContainerPortName() string
+
 	// DeleteJob deletes the job
 	DeleteJob(job interface{}) error
 
-	// UpdateJobStatus updates the job status
-	UpdateJobStatus(job interface{}) error
+	// UpdateJobStatus updates the job status objects with new job conditions based on replica statuses
+	// e.g. Check whether worker 0 is exited without error and set job status
+	UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
+		jobStatus *commonv1.JobStatus, restart bool) error
 
-	// CreateService creates the service
-	CreateService(job interface{}, rtype commonv1.ReplicaType, spec *commonv1.ReplicaSpec, index string) error
+	// Update Job Status in Api server
+	UpdateJobStatusInApiServer(job interface{}) error
 
-	// ReconcilePods reconciles the pods for the job
-	ReconcilePods(
-		job metav1.Object,
-		pods []*v1.Pod,
-		rtype commonv1.ReplicaType,
-		spec *commonv1.ReplicaSpec,
-		rstatus map[string]v1.PodPhase) error
+	// CreateService creates the service, note that the underlying implementation is supposed
+	// to add the job to the service's ownerReference
+	CreateService(job interface{}, service *v1.Service) error
+
+	// DeleteService deletes the service
+	DeleteService(job interface{}, service *v1.Service) error
+
+	// CreatePod creates the pod
+	CreatePod(job interface{}, podTemplate *v1.PodTemplateSpec) error
+
+	// DeletePod deletes the pod
+	DeletePod(job interface{}, pod *v1.Pod) error
+
+	// SetClusterSpec sets the cluster spec for the pod
+	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
+
+	// Returns if this replica is a master role
+	IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool
 }
 
 // JobControllerConfiguration contains configuration of operator.
@@ -467,7 +486,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 				jobStatus.ReplicaStatuses[rtype].Active = 0
 			}
 		}
-		return jc.Controller.UpdateJobStatus(job)
+		return jc.Controller.UpdateJobStatusInApiServer(job)
 	}
 
 	// Save the current state of the replicas
@@ -475,7 +494,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 
 	// Diff current active pods/services with replicas.
 	for rtype, spec := range replicas {
-		err = jc.Controller.ReconcilePods(metaObject, pods, rtype, spec, replicasStatus)
+		err = jc.reconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicasStatus, replicas)
 		if err != nil {
 			log.Warnf("reconcilePods error %v", err)
 			return err
@@ -491,7 +510,7 @@ func (jc *JobController) reconcileJobs(job interface{}, replicas map[commonv1.Re
 
 	// no need to update the tfjob if the status hasn't changed since last time.
 	if !reflect.DeepEqual(*oldStatus, jobStatus) {
-		return jc.Controller.UpdateJobStatus(job)
+		return jc.Controller.UpdateJobStatusInApiServer(job)
 	}
 	return nil
 }

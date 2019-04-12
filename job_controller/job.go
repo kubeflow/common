@@ -1,11 +1,12 @@
 package job_controller
 
 import (
+	"time"
+
 	common "github.com/kubeflow/common/operator/v1"
 	"github.com/prometheus/common/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"time"
 )
 
 func (jc *JobController) deletePodsAndServices(runPolicy *common.RunPolicy, job *runtime.Object, pods []*v1.Pod) error {

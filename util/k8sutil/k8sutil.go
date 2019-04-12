@@ -15,9 +15,10 @@
 package k8sutil
 
 import (
-	commonv1 "github.com/kubeflow/common/operator/v1"
 	"net"
 	"os"
+
+	commonv1 "github.com/kubeflow/common/operator/v1"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
