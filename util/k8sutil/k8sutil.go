@@ -18,6 +18,7 @@ import (
 	"net"
 	"os"
 
+	commonv1 "github.com/kubeflow/common/operator/v1"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -120,4 +121,20 @@ func FilterPodCount(pods []*v1.Pod, phase v1.PodPhase) int32 {
 		}
 	}
 	return result
+}
+
+func GetTotalReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) int32 {
+	tfjobReplicas := int32(0)
+	for _, r := range replicas {
+		tfjobReplicas += *r.Replicas
+	}
+	return tfjobReplicas
+}
+
+func GetTotalFailedReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaStatus) int32 {
+	totalFailedReplicas := int32(0)
+	for _, status := range replicas {
+		totalFailedReplicas += status.Failed
+	}
+	return totalFailedReplicas
 }
