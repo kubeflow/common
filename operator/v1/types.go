@@ -179,7 +179,13 @@ type RunPolicy struct {
 	// +optional
 	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 
-        // TODO - Implement Scheduling policy.
-	// See https://github.com/kubeflow/tf-operator/issues/916#issuecomment-458729706
-        // SchedulingPolicy *SchedulingPolicy `json:"schedulingPolicy,omitempty"`
+	// SchedulingPolicy defines the policy related to scheduling, e.g. gang-scheduling
+	// +optional
+	SchedulingPolicy *SchedulingPolicy `json:"schedulingPolicy,omitempty"`
+}
+
+// SchedulingPolicy encapsulates various scheduling policies of the distributed training
+// job, for example `minAvailable` for gang-scheduling.
+type SchedulingPolicy struct {
+	MinAvailable *int32 `json:"minAvailable,omitempty"`
 }
