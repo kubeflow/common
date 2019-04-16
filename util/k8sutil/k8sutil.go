@@ -124,11 +124,11 @@ func FilterPodCount(pods []*v1.Pod, phase v1.PodPhase) int32 {
 }
 
 func GetTotalReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) int32 {
-	tfjobReplicas := int32(0)
+	jobReplicas := int32(0)
 	for _, r := range replicas {
-		tfjobReplicas += *r.Replicas
+		jobReplicas += *r.Replicas
 	}
-	return tfjobReplicas
+	return jobReplicas
 }
 
 func GetTotalFailedReplicas(replicas map[commonv1.ReplicaType]*commonv1.ReplicaStatus) int32 {

@@ -21,9 +21,9 @@ const (
 	// labels for pods and servers.
 	ReplicaTypeLabel  = "replica-type"
 	ReplicaIndexLabel = "replica-index"
-	labelGroupName      = "group-name"
-	labelJobName      = "job-name"
-	labelJobRole      = "job-role"
+	LabelGroupName    = "group-name"
+	LabelJobName      = "job-name"
+	LabelJobRole      = "job-role"
 )
 
 func isSucceeded(status common.JobStatus) bool {
@@ -51,12 +51,11 @@ func updateJobConditions(jobStatus *common.JobStatus, conditionType common.JobCo
 
 // initializeReplicaStatuses initializes the ReplicaStatuses for replica.
 func initializeReplicaStatuses(jobStatus *common.JobStatus, rtype common.ReplicaType) {
-	commonType := common.ReplicaType(rtype)
 	if jobStatus.ReplicaStatuses == nil {
 		jobStatus.ReplicaStatuses = make(map[common.ReplicaType]*common.ReplicaStatus)
 	}
 
-	jobStatus.ReplicaStatuses[commonType] = &common.ReplicaStatus{}
+	jobStatus.ReplicaStatuses[rtype] = &common.ReplicaStatus{}
 }
 
 // updateJobReplicaStatuses updates the JobReplicaStatuses according to the pod.
@@ -115,7 +114,7 @@ func setCondition(status *common.JobStatus, condition common.JobCondition) {
 		condition.LastTransitionTime = currentCond.LastTransitionTime
 	}
 
-	// Append the updated condition to the
+	// Append the updated condition to the conditions
 	newConditions := filterOutCondition(status.Conditions, condition.Type)
 	status.Conditions = append(newConditions, condition)
 }

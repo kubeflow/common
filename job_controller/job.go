@@ -34,7 +34,7 @@ func (jc *JobController) deletePodsAndServices(runPolicy *common.RunPolicy, job 
 	return nil
 }
 
-func (jc *JobController) cleanupJob(runPolicy *common.RunPolicy, jobStatus common.JobStatus, job interface{}) error {
+func (jc *JobController) cleanupJobIfTTL(runPolicy *common.RunPolicy, jobStatus common.JobStatus, job interface{}) error {
 	currentTime := time.Now()
 	metaObject, _ := job.(metav1.Object)
 	ttl := runPolicy.TTLSecondsAfterFinished
