@@ -26,6 +26,13 @@ import (
 	"k8s.io/kubernetes/pkg/controller"
 )
 
+var (
+	// KeyFunc is the short name to DeletionHandlingMetaNamespaceKeyFunc.
+	// IndexerInformer uses a delta queue, therefore for deletes we have to use this
+	// key function but it should be just fine for non delete events.
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+)
+
 // Common Interface to be implemented by all operators.
 type ControllerInterface interface {
 
@@ -72,7 +79,7 @@ type ControllerInterface interface {
 	CreateService(job interface{}, service *v1.Service) error
 
 	// DeleteService deletes the service
-	DeleteService(job interface{}, service *v1.Service) error
+	DeleteService(job interface{}, name string, namespace string) error
 
 	// CreatePod creates the pod
 	CreatePod(job interface{}, podTemplate *v1.PodTemplate) error
