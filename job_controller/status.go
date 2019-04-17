@@ -70,7 +70,6 @@ func updateJobReplicaStatuses(jobStatus *common.JobStatus, rtype common.ReplicaT
 	}
 }
 
-
 // newCondition creates a new job condition.
 func newCondition(conditionType common.JobConditionType, reason, message string) common.JobCondition {
 	return common.JobCondition{

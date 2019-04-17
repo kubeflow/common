@@ -45,7 +45,7 @@ func TestUpdateJobReplicaStatuses(t *testing.T) {
 	assert.Equal(t, jobStatus.ReplicaStatuses["worker"].Active, int32(1))
 }
 
-func setStatusForTest(jobStatus *v1.JobStatus,  rtype v1.ReplicaType, failed, succeeded, active int32) {
+func setStatusForTest(jobStatus *v1.JobStatus, rtype v1.ReplicaType, failed, succeeded, active int32) {
 	pod := corev1.Pod{
 		Status: corev1.PodStatus{
 		},

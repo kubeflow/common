@@ -90,10 +90,10 @@ func TestCleanupJobIfTTL(T *testing.T) {
 	}
 	oneDayAgo := time.Now()
 	// one day ago
-	oneDayAgo.AddDate(0,0,-1)
+	oneDayAgo.AddDate(0, 0, -1)
 	jobStatus := common.JobStatus{
 		CompletionTime: &metav1.Time{
-			oneDayAgo,
+			Time: oneDayAgo,
 		},
 	}
 
