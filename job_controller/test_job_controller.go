@@ -10,9 +10,9 @@ import (
 )
 
 type TestJobController struct {
-	job            *testv1.TestJob
-	pods           []*corev1.Pod
-	services       []*corev1.Service
+	job      *testv1.TestJob
+	pods     []*corev1.Pod
+	services []*corev1.Service
 }
 
 func (TestJobController) ControllerName() string {
@@ -66,7 +66,7 @@ func (t *TestJobController) DeleteJob(job interface{}) error {
 }
 
 func (t *TestJobController) UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
-	jobStatus commonv1.JobStatus) error {
+	jobStatus commonv1.JobStatus, restart bool) error {
 	return nil
 }
 
@@ -77,7 +77,7 @@ func (t *TestJobController) CreateService(job interface{}, service *corev1.Servi
 func (t *TestJobController) DeleteService(job interface{}, name string, namespace string) error {
 	log.Info("Deleting service " + name)
 	var remainingServices []*corev1.Service
-	for _, tservice:= range t.services{
+	for _, tservice := range t.services {
 		if tservice.Name != name {
 			remainingServices = append(remainingServices, tservice)
 		}
@@ -86,7 +86,7 @@ func (t *TestJobController) DeleteService(job interface{}, name string, namespac
 	return nil
 }
 
-func (t *TestJobController) CreatePod(job interface{}, podTemplate *corev1.PodTemplate) error {
+func (t *TestJobController) CreatePod(job interface{}, podTemplate *corev1.PodTemplateSpec) error {
 	return nil
 }
 
@@ -102,6 +102,14 @@ func (t *TestJobController) DeletePod(job interface{}, pod *corev1.Pod) error {
 	return nil
 }
 
-func (t *TestJobController) SetClusterSpec(job interface{}, podTemplate *corev1.PodTemplate, rtype, index string) error {
+func (t *TestJobController) SetClusterSpec(job interface{}, podTemplate *corev1.PodTemplateSpec, rtype, index string) error {
 	return nil
+}
+
+func (t *TestJobController) GetDefaultContainerName() string {
+	return "default-container"
+}
+
+func (t *TestJobController) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool {
+	return true
 }

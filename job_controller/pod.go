@@ -54,7 +54,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 	if pod.DeletionTimestamp != nil {
 		// on a restart of the controller controller, it's possible a new pod shows up in a state that
 		// is already pending deletion. Prevent the pod from being a creation observation.
-		// tc.deletePod(pod)
+		// jc.deletePod(pod)
 		return
 	}
 
@@ -274,7 +274,7 @@ func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.
 
 // reconcilePods checks and updates pods for each given ReplicaSpec.
 // It will requeue the job in case of an error while creating/deleting pods.
-func (tc *JobController) reconcilePods(
+func (jc *JobController) reconcilePods(
 	job interface{},
 	jobStatus *common.JobStatus,
 	pods []*v1.Pod,
@@ -296,19 +296,18 @@ func (tc *JobController) reconcilePods(
 	rt := strings.ToLower(string(rtype))
 	logger := commonutil.LoggerForReplica(metaObject, rt)
 	// Get all pods for the type rt.
-	pods, err := tc.FilterPodsForReplicaType(pods, rt)
+	pods, err := jc.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
 	}
 	numReplicas := int(*spec.Replicas)
 	restart := false
-	masterRole := false
+	var masterRole bool
 
 	initializeReplicaStatuses(jobStatus, rtype)
 
-	podSlices := tc.GetPodSlices(pods, numReplicas, logger)
+	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
-		masterRole = false
 		if len(podSlice) > 1 {
 			logger.Warningf("We have too many pods for %s %d", rt, index)
 		} else if len(podSlice) == 0 {
@@ -317,8 +316,8 @@ func (tc *JobController) reconcilePods(
 			// if master pod is present, select the master pod
 			// if master is not present, first worker pod is selected as the master.
 			// check if this replica is the master role
-			masterRole = tc.Controller.IsMasterRole(replicas, rtype, index)
-			err = tc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
+			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
+			err = jc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -329,17 +328,17 @@ func (tc *JobController) reconcilePods(
 			var exitCode int32 = 0xbeef // magic number
 			for _, status := range pod.Status.ContainerStatuses {
 				state := status.State
-				if status.Name == tc.Controller.GetDefaultContainerName() && state.Terminated != nil {
+				if status.Name == jc.Controller.GetDefaultContainerName() && state.Terminated != nil {
 					exitCode = state.Terminated.ExitCode
 					logger.Infof("Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
-					tc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, exitedWithCodeReason, "Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
+					jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, exitedWithCodeReason, "Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
 				}
 			}
 			// Check if the pod is retryable.
 			if spec.RestartPolicy == common.RestartPolicyExitCode {
 				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
 					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
-					if err := tc.Controller.DeletePod(job, pod); err != nil {
+					if err := jc.Controller.DeletePod(job, pod); err != nil {
 						return err
 					}
 					restart = true
@@ -349,11 +348,11 @@ func (tc *JobController) reconcilePods(
 			updateJobReplicaStatuses(jobStatus, rtype, pod)
 		}
 	}
-	return tc.Controller.UpdateJobStatus(job, replicas, *jobStatus, restart)
+	return jc.Controller.UpdateJobStatus(job, replicas, *jobStatus, restart)
 }
 
 // createNewPod creates a new pod for the given index and type.
-func (tc *JobController) createNewPod(job interface{}, rt, index string, spec *common.ReplicaSpec, masterRole bool,
+func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *common.ReplicaSpec, masterRole bool,
 	replicas map[common.ReplicaType]*common.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
@@ -370,16 +369,16 @@ func (tc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 		return err
 	}
 	expectationPodsKey := GenExpectationPodsKey(jobKey, rt)
-	err = tc.Expectations.ExpectCreations(expectationPodsKey, 1)
+	err = jc.Expectations.ExpectCreations(expectationPodsKey, 1)
 	if err != nil {
 		return err
 	}
 	logger := commonutil.LoggerForReplica(metaObject, rt)
 
 	// Set type and index for the worker.
-	labels := tc.GenLabels(metaObject.GetName())
-	labels[tc.Controller.GetReplicaTypeLabelKey()] = rt
-	labels[tc.Controller.GetReplicaIndexLabelKey()] = index
+	labels := jc.GenLabels(metaObject.GetName())
+	labels[jc.Controller.GetReplicaTypeLabelKey()] = rt
+	labels[jc.Controller.GetReplicaIndexLabelKey()] = index
 
 	if masterRole {
 		labels[LabelJobRole] = "master"
@@ -398,7 +397,7 @@ func (tc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 		podTemplate.Labels[key] = value
 	}
 
-	if err := tc.Controller.SetClusterSpec(job, podTemplate, rt, index); err != nil {
+	if err := jc.Controller.SetClusterSpec(job, podTemplate, rt, index); err != nil {
 		return err
 	}
 
@@ -407,24 +406,24 @@ func (tc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 	if podTemplate.Spec.RestartPolicy != v1.RestartPolicy("") {
 		errMsg := "Restart policy in pod template will be overwritten by restart policy in replica spec"
 		logger.Warning(errMsg)
-		tc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateRestartPolicyReason, errMsg)
+		jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateRestartPolicyReason, errMsg)
 	}
 	setRestartPolicy(podTemplate, spec)
 
 	// if gang-scheduling is enabled:
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
 	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "kube-batch".
-	if tc.Config.EnableGangScheduling {
+	if jc.Config.EnableGangScheduling {
 		if isNonGangSchedulerSet(replicas) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
 			logger.Warning(errMsg)
-			tc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
+			jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
 		} else {
 			podTemplate.Spec.SchedulerName = gangSchedulerName
 		}
 	}
 
-	err = tc.Controller.CreatePod(job, podTemplate)
+	err = jc.Controller.CreatePod(job, podTemplate)
 	if err != nil && errors.IsTimeout(err) {
 		// Pod is created but its initialization has timed out.
 		// If the initialization is successful eventually, the
