@@ -272,9 +272,9 @@ func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.
 	return podSlices
 }
 
-// reconcilePods checks and updates pods for each given ReplicaSpec.
+// ReconcilePods checks and updates pods for each given ReplicaSpec.
 // It will requeue the job in case of an error while creating/deleting pods.
-func (jc *JobController) reconcilePods(
+func (jc *JobController) ReconcilePods(
 	job interface{},
 	jobStatus *common.JobStatus,
 	pods []*v1.Pod,
