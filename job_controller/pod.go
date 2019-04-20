@@ -313,8 +313,6 @@ func (jc *JobController) ReconcilePods(
 		} else if len(podSlice) == 0 {
 			logger.Infof("Need to create new pod: %s-%d", rt, index)
 
-			// if master pod is present, select the master pod
-			// if master is not present, first worker pod is selected as the master.
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
 			err = jc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
@@ -324,7 +322,7 @@ func (jc *JobController) ReconcilePods(
 		} else {
 			// Check the status of the current pod.
 			pod := podSlice[0]
-			// Get the exit code of the tensorflow container.
+			// Get the exit code of the container.
 			var exitCode int32 = 0xbeef // magic number
 			for _, status := range pod.Status.ContainerStatuses {
 				state := status.State
@@ -440,6 +438,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 }
 
 func setRestartPolicy(podTemplateSpec *v1.PodTemplateSpec, spec *common.ReplicaSpec) {
+	// This is necessary since restartPolicyExitCode is not supported in v1.PodTemplateSpec
 	if spec.RestartPolicy == common.RestartPolicyExitCode {
 		podTemplateSpec.Spec.RestartPolicy = v1.RestartPolicyNever
 	} else {
