@@ -147,7 +147,7 @@ const (
 	RestartPolicyOnFailure RestartPolicy = "OnFailure"
 	RestartPolicyNever     RestartPolicy = "Never"
 
-	// `ExitCode` policy means that user should add exit code by themselves,
+	// RestartPolicyExitCode policy means that user should add exit code by themselves,
 	// The job operator will check these exit codes to
 	// determine the behavior when an error occurs:
 	// - 1-127: permanent error, do not restart.
