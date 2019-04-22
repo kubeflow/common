@@ -18,16 +18,34 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/kubernetes/pkg/controller"
 
+	common "github.com/kubeflow/common/operator/v1"
 	commonutil "github.com/kubeflow/common/util"
+	trainutil "github.com/kubeflow/common/util/train"
+)
+
+const (
+	// gang scheduler name.
+	gangSchedulerName = "kube-batch"
+	// podTemplateRestartPolicyReason is the warning reason when the restart
+	// policy is set in pod template.
+	podTemplateRestartPolicyReason = "SettedPodTemplateRestartPolicy"
+	// exitedWithCodeReason is the normal reason when the pod is exited because of the exit code.
+	exitedWithCodeReason = "ExitedWithCode"
+	// podTemplateSchedulerNameReason is the warning reason when other scheduler name is set
+	// in pod templates with gang-scheduling enabled
+	podTemplateSchedulerNameReason = "SettedPodTemplateSchedulerName"
 )
 
 // When a pod is created, enqueue the job that manages it and update its expectations.
@@ -36,7 +54,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 	if pod.DeletionTimestamp != nil {
 		// on a restart of the controller controller, it's possible a new pod shows up in a state that
 		// is already pending deletion. Prevent the pod from being a creation observation.
-		// tc.deletePod(pod)
+		// jc.deletePod(pod)
 		return
 	}
 
@@ -252,4 +270,187 @@ func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.
 		}
 	}
 	return podSlices
+}
+
+// ReconcilePods checks and updates pods for each given ReplicaSpec.
+// It will requeue the job in case of an error while creating/deleting pods.
+func (jc *JobController) ReconcilePods(
+	job interface{},
+	jobStatus *common.JobStatus,
+	pods []*v1.Pod,
+	rtype common.ReplicaType,
+	spec *common.ReplicaSpec,
+	rstatus map[string]v1.PodPhase,
+	replicas map[common.ReplicaType]*common.ReplicaSpec) error {
+
+	metaObject, ok := job.(metav1.Object)
+	if !ok {
+		return fmt.Errorf("job is not a metav1.Object type")
+	}
+	runtimeObject, ok := job.(runtime.Object)
+	if !ok {
+		return fmt.Errorf("job is not a runtime.Object type")
+	}
+
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+	logger := commonutil.LoggerForReplica(metaObject, rt)
+	// Get all pods for the type rt.
+	pods, err := jc.FilterPodsForReplicaType(pods, rt)
+	if err != nil {
+		return err
+	}
+	numReplicas := int(*spec.Replicas)
+	restart := false
+	var masterRole bool
+
+	initializeReplicaStatuses(jobStatus, rtype)
+
+	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
+	for index, podSlice := range podSlices {
+		if len(podSlice) > 1 {
+			logger.Warningf("We have too many pods for %s %d", rt, index)
+		} else if len(podSlice) == 0 {
+			logger.Infof("Need to create new pod: %s-%d", rt, index)
+
+			// check if this replica is the master role
+			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
+			err = jc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Check the status of the current pod.
+			pod := podSlice[0]
+			// Get the exit code of the container.
+			var exitCode int32 = 0xbeef // magic number
+			for _, status := range pod.Status.ContainerStatuses {
+				state := status.State
+				if status.Name == jc.Controller.GetDefaultContainerName() && state.Terminated != nil {
+					exitCode = state.Terminated.ExitCode
+					logger.Infof("Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
+					jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, exitedWithCodeReason, "Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
+				}
+			}
+			// Check if the pod is retryable.
+			if spec.RestartPolicy == common.RestartPolicyExitCode {
+				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
+					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
+					if err := jc.Controller.DeletePod(job, pod); err != nil {
+						return err
+					}
+					restart = true
+				}
+			}
+
+			updateJobReplicaStatuses(jobStatus, rtype, pod)
+		}
+	}
+	return jc.Controller.UpdateJobStatus(job, replicas, *jobStatus, restart)
+}
+
+// createNewPod creates a new pod for the given index and type.
+func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *common.ReplicaSpec, masterRole bool,
+	replicas map[common.ReplicaType]*common.ReplicaSpec) error {
+
+	metaObject, ok := job.(metav1.Object)
+	if !ok {
+		return fmt.Errorf("job is not a metav1.Object type")
+	}
+	runtimeObject, ok := job.(runtime.Object)
+	if !ok {
+		return fmt.Errorf("job is not a runtime.Object type")
+	}
+	jobKey, err := KeyFunc(metaObject)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
+		return err
+	}
+	expectationPodsKey := GenExpectationPodsKey(jobKey, rt)
+	err = jc.Expectations.ExpectCreations(expectationPodsKey, 1)
+	if err != nil {
+		return err
+	}
+	logger := commonutil.LoggerForReplica(metaObject, rt)
+
+	// Set type and index for the worker.
+	labels := jc.GenLabels(metaObject.GetName())
+	labels[jc.Controller.GetReplicaTypeLabelKey()] = rt
+	labels[jc.Controller.GetReplicaIndexLabelKey()] = index
+
+	if masterRole {
+		labels[LabelJobRole] = "master"
+	}
+
+	podTemplate := spec.Template.DeepCopy()
+
+	// Set name for the template.
+	podTemplate.Name = GenGeneralName(metaObject.GetName(), rt, index)
+
+	if podTemplate.Labels == nil {
+		podTemplate.Labels = make(map[string]string)
+	}
+
+	for key, value := range labels {
+		podTemplate.Labels[key] = value
+	}
+
+	if err := jc.Controller.SetClusterSpec(job, podTemplate, rt, index); err != nil {
+		return err
+	}
+
+	// Submit a warning event if the user specifies restart policy for
+	// the pod template. We recommend to set it from the replica level.
+	if podTemplate.Spec.RestartPolicy != v1.RestartPolicy("") {
+		errMsg := "Restart policy in pod template will be overwritten by restart policy in replica spec"
+		logger.Warning(errMsg)
+		jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateRestartPolicyReason, errMsg)
+	}
+	setRestartPolicy(podTemplate, spec)
+
+	// if gang-scheduling is enabled:
+	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
+	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "kube-batch".
+	if jc.Config.EnableGangScheduling {
+		if isNonGangSchedulerSet(replicas) {
+			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
+			logger.Warning(errMsg)
+			jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
+		} else {
+			podTemplate.Spec.SchedulerName = gangSchedulerName
+		}
+	}
+
+	err = jc.Controller.CreatePod(job, podTemplate)
+	if err != nil && errors.IsTimeout(err) {
+		// Pod is created but its initialization has timed out.
+		// If the initialization is successful eventually, the
+		// controller will observe the creation via the informer.
+		// If the initialization fails, or if the pod keeps
+		// uninitialized for a long time, the informer will not
+		// receive any update, and the controller will create a new
+		// pod when the expectation expires.
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+func setRestartPolicy(podTemplateSpec *v1.PodTemplateSpec, spec *common.ReplicaSpec) {
+	// This is necessary since restartPolicyExitCode is not supported in v1.PodTemplateSpec
+	if spec.RestartPolicy == common.RestartPolicyExitCode {
+		podTemplateSpec.Spec.RestartPolicy = v1.RestartPolicyNever
+	} else {
+		podTemplateSpec.Spec.RestartPolicy = v1.RestartPolicy(spec.RestartPolicy)
+	}
+}
+
+func isNonGangSchedulerSet(replicas map[common.ReplicaType]*common.ReplicaSpec) bool {
+	for _, spec := range replicas {
+		if spec.Template.Spec.SchedulerName != "" && spec.Template.Spec.SchedulerName != gangSchedulerName {
+			return true
+		}
+	}
+	return false
 }
