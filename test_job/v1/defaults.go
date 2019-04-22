@@ -32,7 +32,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
 }
 
-// setDefaultPort sets the default ports for tensorflow container.
+// setDefaultPort sets the default ports for container.
 func setDefaultPort(spec *v1.PodSpec) {
 	index := 0
 	for i, container := range spec.Containers {
@@ -99,7 +99,7 @@ func SetDefaults_TestJob(testjob *TestJob) {
 	for _, spec := range testjob.Spec.TestReplicaSpecs {
 		// Set default replicas to 1.
 		setDefaultReplicas(spec)
-		// Set default port to tensorFlow container.
+		// Set default port to the container.
 		setDefaultPort(&spec.Template.Spec)
 	}
 }
