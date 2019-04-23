@@ -70,6 +70,10 @@ func (t *TestJobController) UpdateJobStatus(job interface{}, replicas map[common
 	return nil
 }
 
+func (t *TestJobController) UpdateJobStatusInApiServer(job interface{}, jobStatus *commonv1.JobStatus) error {
+	return nil
+}
+
 func (t *TestJobController) CreateService(job interface{}, service *corev1.Service) error {
 	return nil
 }

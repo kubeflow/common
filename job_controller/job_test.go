@@ -1,6 +1,7 @@
 package job_controller
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -83,6 +84,83 @@ func TestDeletePodsAndServices(T *testing.T) {
 	}
 }
 
+func TestPastBackoffLimit(T *testing.T) {
+	type testCase struct {
+		backOffLimit   int32
+		expectedResult bool
+	}
+
+	var testcase = []testCase{
+		{
+			int32(0),
+			false,
+		},
+	}
+
+	for _, tc := range testcase {
+		runningPod := newPod("runningPod", corev1.PodRunning)
+		succeededPod := newPod("succeededPod", corev1.PodSucceeded)
+		allPods := []*corev1.Pod{runningPod, succeededPod}
+
+		testJobController := TestJobController{
+			pods: allPods,
+		}
+
+		mainJobController := JobController{
+			Controller: &testJobController,
+		}
+		runPolicy := common.RunPolicy{
+			BackoffLimit: &tc.backOffLimit,
+		}
+
+		result, err := mainJobController.pastBackoffLimit("fake-job", &runPolicy, nil, allPods)
+
+		if assert.NoError(T, err) {
+			assert.Equal(T, result, tc.expectedResult)
+		}
+	}
+}
+
+func TestPastActiveDeadline(T *testing.T) {
+	type testCase struct {
+		activeDeadlineSeconds int64
+		expectedResult        bool
+	}
+
+	var testcase = []testCase{
+		{
+			int64(0),
+			true,
+		},
+		{
+			int64(2),
+			false,
+		},
+	}
+
+	for _, tc := range testcase {
+
+		testJobController := TestJobController{}
+
+		mainJobController := JobController{
+			Controller: &testJobController,
+		}
+		runPolicy := common.RunPolicy{
+			ActiveDeadlineSeconds: &tc.activeDeadlineSeconds,
+		}
+		jobStatus := common.JobStatus{
+			StartTime: &metav1.Time{
+				Time: time.Now(),
+			},
+		}
+
+		result := mainJobController.pastActiveDeadline(&runPolicy, jobStatus)
+		assert.Equal(
+			T, result, tc.expectedResult,
+			"Result is not expected for activeDeadlineSeconds == "+strconv.FormatInt(tc.activeDeadlineSeconds, 10))
+	}
+}
+
 func TestCleanupJobIfTTL(T *testing.T) {
 	ttl := int32(0)
 	runPolicy := common.RunPolicy{
@@ -108,6 +186,31 @@ func TestCleanupJobIfTTL(T *testing.T) {
 	err := mainJobController.cleanupJobIfTTL(&runPolicy, jobStatus, job)
 	if assert.NoError(T, err) {
 		// job field is zeroed
+		assert.Empty(T, testJobController.job)
+	}
+}
+
+func TestCleanupJob(T *testing.T) {
+	ttl := int32(0)
+	runPolicy := common.RunPolicy{
+		TTLSecondsAfterFinished: &ttl,
+	}
+	jobStatus := common.JobStatus{
+		CompletionTime: &metav1.Time{
+			Time: time.Now(),
+		},
+	}
+
+	testJobController := &TestJobController{
+		job: &v1.TestJob{},
+	}
+	mainJobController := JobController{
+		Controller: testJobController,
+	}
+
+	var job interface{}
+	err := mainJobController.cleanupJob(&runPolicy, jobStatus, job)
+	if assert.NoError(T, err) {
 		assert.Empty(T, testJobController.job)
 	}
 }
