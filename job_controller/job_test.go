@@ -21,19 +21,19 @@ func TestDeletePodsAndServices(T *testing.T) {
 
 	var testcase = []testCase{
 		{
-			common.CleanPodPolicyRunning,
-			true,
-			false,
+			cleanPodPolicy:               common.CleanPodPolicyRunning,
+			deleteRunningPodAndService:   true,
+			deleteSucceededPodAndService: false,
 		},
 		{
-			common.CleanPodPolicyAll,
-			true,
-			true,
+			cleanPodPolicy:               common.CleanPodPolicyAll,
+			deleteRunningPodAndService:   true,
+			deleteSucceededPodAndService: true,
 		},
 		{
-			common.CleanPodPolicyNone,
-			false,
-			false,
+			cleanPodPolicy:               common.CleanPodPolicyNone,
+			deleteRunningPodAndService:   false,
+			deleteSucceededPodAndService: false,
 		},
 	}
 
@@ -86,14 +86,14 @@ func TestDeletePodsAndServices(T *testing.T) {
 
 func TestPastBackoffLimit(T *testing.T) {
 	type testCase struct {
-		backOffLimit   int32
-		expectedResult bool
+		backOffLimit           int32
+		shouldPassBackoffLimit bool
 	}
 
 	var testcase = []testCase{
 		{
-			int32(0),
-			false,
+			backOffLimit:           int32(0),
+			shouldPassBackoffLimit: false,
 		},
 	}
 
@@ -116,25 +116,25 @@ func TestPastBackoffLimit(T *testing.T) {
 		result, err := mainJobController.pastBackoffLimit("fake-job", &runPolicy, nil, allPods)
 
 		if assert.NoError(T, err) {
-			assert.Equal(T, result, tc.expectedResult)
+			assert.Equal(T, result, tc.shouldPassBackoffLimit)
 		}
 	}
 }
 
 func TestPastActiveDeadline(T *testing.T) {
 	type testCase struct {
-		activeDeadlineSeconds int64
-		expectedResult        bool
+		activeDeadlineSeconds    int64
+		shouldPassActiveDeadline bool
 	}
 
 	var testcase = []testCase{
 		{
-			int64(0),
-			true,
+			activeDeadlineSeconds:    int64(0),
+			shouldPassActiveDeadline: true,
 		},
 		{
-			int64(2),
-			false,
+			activeDeadlineSeconds:    int64(2),
+			shouldPassActiveDeadline: false,
 		},
 	}
 
@@ -156,7 +156,7 @@ func TestPastActiveDeadline(T *testing.T) {
 
 		result := mainJobController.pastActiveDeadline(&runPolicy, jobStatus)
 		assert.Equal(
-			T, result, tc.expectedResult,
+			T, result, tc.shouldPassActiveDeadline,
 			"Result is not expected for activeDeadlineSeconds == "+strconv.FormatInt(tc.activeDeadlineSeconds, 10))
 	}
 }
