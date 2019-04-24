@@ -3,10 +3,6 @@
 .vscode/
 .swp
 
-# Some users might still want to generate this via `go build -mod=vendor`
-# even though Go Modules doesn't generate it by default
-vendor/
-
 # Items below are adopted from https://github.com/github/gitignore/blob/master/Go.gitignore
 
 ## Binaries for programs and plugins
