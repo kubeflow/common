@@ -87,14 +87,14 @@ type ControllerInterface interface {
 	// DeletePod deletes the pod
 	DeletePod(job interface{}, pod *v1.Pod) error
 
-	// Get the deafult container port number
-	GetDefaultContainerPortName() string
-        
-        // SetClusterSpec sets the cluster spec for the pod 
+	// SetClusterSpec sets the cluster spec for the pod
 	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
 
 	// Returns the default container name in pod
 	GetDefaultContainerName() string
+
+	// Get the deafult container port number
+	GetDefaultContainerPortName() string
 
 	// Returns if this replica type with index specified is a master role.
 	// MasterRole pod will have "job-role=master" set in its label
