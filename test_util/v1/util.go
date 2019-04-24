@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test_util
+package v1
 
 import (
 	"strings"
 	"testing"
 
 	common "github.com/kubeflow/common/operator/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	LabelGroupName = "group-name"
+	LabelGroupName   = "group-name"
 	LabelTestJobName = "test-job-name"
 )
 
@@ -35,13 +35,13 @@ var (
 	// KeyFunc is the short name to DeletionHandlingMetaNamespaceKeyFunc.
 	// IndexerInformer uses a delta queue, therefore for deletes we have to use this
 	// key function but it should be just fine for non delete events.
-	KeyFunc   = cache.DeletionHandlingMetaNamespaceKeyFunc
+	KeyFunc       = cache.DeletionHandlingMetaNamespaceKeyFunc
 	TestGroupName = testjobv1.GroupName
 )
 
 func GenLabels(jobName string) map[string]string {
 	return map[string]string{
-		LabelGroupName: TestGroupName,
+		LabelGroupName:   TestGroupName,
 		LabelTestJobName: strings.Replace(jobName, "/", "-", -1),
 	}
 }

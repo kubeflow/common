@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test_util
+package v1
 
 import (
 	"time"
@@ -20,7 +20,7 @@ import (
 
 const (
 	TestImageName = "test-image-for-kubeflow-common:latest"
-	TestJobName = "test-job"
+	TestJobName   = "test-job"
 	LabelWorker   = "worker"
 
 	SleepInterval = 500 * time.Millisecond
