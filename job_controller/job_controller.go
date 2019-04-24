@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	common "github.com/kubeflow/common/operator/v1"
+	commonv1 "github.com/kubeflow/common/operator/v1"
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
@@ -73,7 +73,7 @@ type ControllerInterface interface {
 	DeleteJob(job interface{}) error
 
 	// UpdateJobStatus updates the job status and job conditions
-	UpdateJobStatus(job interface{}, replicas map[common.ReplicaType]*common.ReplicaSpec, jobStatus common.JobStatus) error
+	UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, jobStatus commonv1.JobStatus, restart bool) error
 
 	// CreateService creates the service
 	CreateService(job interface{}, service *v1.Service) error
@@ -82,19 +82,26 @@ type ControllerInterface interface {
 	DeleteService(job interface{}, name string, namespace string) error
 
 	// CreatePod creates the pod
-	CreatePod(job interface{}, podTemplate *v1.PodTemplate) error
+	CreatePod(job interface{}, podTemplate *v1.PodTemplateSpec) error
 
 	// DeletePod deletes the pod
 	DeletePod(job interface{}, pod *v1.Pod) error
-
-	// SetClusterSpec sets the cluster spec for the pod
-	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplate, rtype, index string) error
 
 	// Get the default container name
 	GetDefaultContainerName() string
 
 	// Get the deafult container port number
 	GetDefaultContainerPortName() string
+        
+        // SetClusterSpec sets the cluster spec for the pod 
+	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
+
+	// Returns the default container name in pod
+	GetDefaultContainerName() string
+
+	// Returns if this replica type with index specified is a master role.
+	// MasterRole pod will have "job-role=master" set in its label
+	IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool
 }
 
 // JobControllerConfiguration contains configuration of operator.
