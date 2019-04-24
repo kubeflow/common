@@ -24,7 +24,6 @@ const (
 	LabelGroupName    = "group-name"
 	LabelJobName      = "job-name"
 	LabelJobRole      = "job-role"
-	DefaultContainerName = "job-container"
 	DefaultContainerPortName = "9999"
 )
 

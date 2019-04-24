@@ -51,10 +51,6 @@ func (TestJobController) GetJobRoleKey() string {
 	return LabelJobRole
 }
 
-func (TestJobController) GetDefaultContainerName() string {
-	return DefaultContainerName
-}
-
 func (TestJobController) GetDefaultContainerPortName() string {
 	return DefaultContainerPortName
 }

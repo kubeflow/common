@@ -87,9 +87,6 @@ type ControllerInterface interface {
 	// DeletePod deletes the pod
 	DeletePod(job interface{}, pod *v1.Pod) error
 
-	// Get the default container name
-	GetDefaultContainerName() string
-
 	// Get the deafult container port number
 	GetDefaultContainerPortName() string
         
