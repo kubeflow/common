@@ -89,6 +89,12 @@ type ControllerInterface interface {
 
 	// SetClusterSpec sets the cluster spec for the pod
 	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplate, rtype, index string) error
+
+	// Get the default container name
+	GetDefaultContainerName() string
+
+	// Get the deafult container port number
+	GetDefaultContainerPortName() string
 }
 
 // JobControllerConfiguration contains configuration of operator.

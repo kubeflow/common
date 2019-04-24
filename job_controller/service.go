@@ -16,11 +16,16 @@ package job_controller
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
+	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/kubernetes/pkg/controller"
 )
 
@@ -156,4 +161,114 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 		}
 	}
 	return serviceSlices
+}
+
+// reconcileServices checks and updates services for each given ReplicaSpec.
+// It will requeue the job in case of an error while creating/deleting services.
+func (jc *JobController) reconcileServices(
+	job metav1.Object,
+	services []*v1.Service,
+	rtype commonv1.ReplicaType,
+	spec *commonv1.ReplicaSpec) error {
+
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+
+	replicas := int(*spec.Replicas)
+	// Get all services for the type rt.
+	services, err := jc.FilterServicesForReplicaType(services, rt)
+	if err != nil {
+		return err
+	}
+
+	serviceSlices := jc.GetServiceSlices(services, replicas, util.LoggerForReplica(job, rt))
+
+	for index, serviceSlice := range serviceSlices {
+		if len(serviceSlice) > 1 {
+			util.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
+			// TODO(gaocegege): Kill some services.
+		} else if len(serviceSlice) == 0 {
+			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
+			err = jc.createNewService(job, rtype, spec, strconv.Itoa(index))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// GetPortFromJob gets the port of tensorflow container.
+func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, error) {
+	containers := spec.Template.Spec.Containers
+	for _, container := range containers {
+		if container.Name == jc.Controller.GetDefaultContainerName() {
+			ports := container.Ports
+			for _, port := range ports {
+				if port.Name == jc.Controller.GetDefaultContainerPortName(){
+					return port.ContainerPort, nil
+				}
+			}
+		}
+	}
+	return -1, fmt.Errorf("failed to found the port")
+}
+
+// createNewService creates a new service for the given index and type.
+func (jc *JobController) createNewService(job metav1.Object, rtype commonv1.ReplicaType,
+	spec *commonv1.ReplicaSpec, index string) error {
+	tfjobKey, err := KeyFunc(job)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
+		return err
+	}
+
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+	expectationServicesKey := GenExpectationServicesKey(tfjobKey, rt)
+	err = jc.Expectations.ExpectCreations(expectationServicesKey, 1)
+	if err != nil {
+		return err
+	}
+
+	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
+	labels := jc.GenLabels(job.GetName())
+	labels[jc.Controller.GetReplicaTypeLabelKey()] = rt
+	labels[jc.Controller.GetReplicaIndexLabelKey()] = index
+
+	port, err := jc.GetPortFromJob(spec)
+	if err != nil {
+		return err
+	}
+
+	service := &v1.Service{
+		Spec: v1.ServiceSpec{
+			ClusterIP: "None",
+			Selector:  labels,
+			Ports: []v1.ServicePort{
+				{
+					Name: jc.Controller.GetDefaultContainerPortName(),
+					Port: port,
+				},
+			},
+		},
+	}
+
+	service.Name = GenGeneralName(job.GetName(), rt, index)
+	service.Labels = labels
+
+	err = jc.Controller.CreateService(job, service)
+	if err != nil && errors.IsTimeout(err) {
+		// Service is created but its initialization has timed out.
+		// If the initialization is successful eventually, the
+		// controller will observe the creation via the informer.
+		// If the initialization fails, or if the service keeps
+		// uninitialized for a long time, the informer will not
+		// receive any update, and the controller will create a new
+		// service when the expectation expires.
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
