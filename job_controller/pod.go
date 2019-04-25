@@ -65,7 +65,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
 
 		if job == nil {
-			if pod.Labels[jc.Controller.GetGroupNameLabelKey()] == jc.Controller.GetGroupNameLabelValue() {
+			if pod.Labels[LabelGroupName] == jc.Controller.GetGroupNameLabelValue() {
 				logger.Info("This pod's job does not exist")
 			}
 			return
@@ -77,12 +77,12 @@ func (jc *JobController) AddPod(obj interface{}) {
 			return
 		}
 
-		if _, ok := pod.Labels[jc.Controller.GetReplicaTypeLabelKey()]; !ok {
+		if _, ok := pod.Labels[ReplicaTypeLabel]; !ok {
 			logger.Infof("This pod maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtype := pod.Labels[jc.Controller.GetReplicaTypeLabelKey()]
+		rtype := pod.Labels[ReplicaTypeLabel]
 		expectationPodsKey := GenExpectationPodsKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationPodsKey)
@@ -178,12 +178,12 @@ func (jc *JobController) DeletePod(obj interface{}) {
 		return
 	}
 
-	if _, ok := pod.Labels[jc.Controller.GetReplicaTypeLabelKey()]; !ok {
+	if _, ok := pod.Labels[ReplicaTypeLabel]; !ok {
 		logger.Infof("This pod maybe not created by %v", jc.Controller.ControllerName())
 		return
 	}
 
-	rtype := pod.Labels[jc.Controller.GetReplicaTypeLabelKey()]
+	rtype := pod.Labels[ReplicaTypeLabel]
 	expectationPodsKey := GenExpectationPodsKey(jobKey, rtype)
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
@@ -235,7 +235,7 @@ func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType st
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[jc.Controller.GetReplicaTypeLabelKey()] = replicaType
+	replicaSelector.MatchLabels[ReplicaTypeLabel] = replicaType
 
 	for _, pod := range pods {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -254,11 +254,11 @@ func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType st
 func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 	podSlices := make([][]*v1.Pod, replicas)
 	for _, pod := range pods {
-		if _, ok := pod.Labels[jc.Controller.GetReplicaIndexLabelKey()]; !ok {
+		if _, ok := pod.Labels[ReplicaIndexLabel]; !ok {
 			logger.Warning("The pod do not have the index label.")
 			continue
 		}
-		index, err := strconv.Atoi(pod.Labels[jc.Controller.GetReplicaIndexLabelKey()])
+		index, err := strconv.Atoi(pod.Labels[ReplicaIndexLabel])
 		if err != nil {
 			logger.Warningf("Error when strconv.Atoi: %v", err)
 			continue
@@ -375,8 +375,8 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 
 	// Set type and index for the worker.
 	labels := jc.GenLabels(metaObject.GetName())
-	labels[jc.Controller.GetReplicaTypeLabelKey()] = rt
-	labels[jc.Controller.GetReplicaIndexLabelKey()] = index
+	labels[ReplicaTypeLabel] = rt
+	labels[ReplicaIndexLabel] = index
 
 	if masterRole {
 		labels[LabelJobRole] = "master"
