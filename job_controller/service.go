@@ -165,7 +165,7 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 
 // reconcileServices checks and updates services for each given ReplicaSpec.
 // It will requeue the job in case of an error while creating/deleting services.
-func (jc *JobController) reconcileServices(
+func (jc *JobController) ReconcileServices(
 	job metav1.Object,
 	services []*v1.Service,
 	rtype commonv1.ReplicaType,
@@ -189,7 +189,7 @@ func (jc *JobController) reconcileServices(
 			// TODO(gaocegege): Kill some services.
 		} else if len(serviceSlice) == 0 {
 			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
-			err = jc.createNewService(job, rtype, spec, strconv.Itoa(index))
+			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
 			}
@@ -198,14 +198,14 @@ func (jc *JobController) reconcileServices(
 	return nil
 }
 
-// GetPortFromJob gets the port of tensorflow container.
+// GetPortFromJob gets the port of job container.
 func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, error) {
 	containers := spec.Template.Spec.Containers
 	for _, container := range containers {
 		if container.Name == jc.Controller.GetDefaultContainerName() {
 			ports := container.Ports
 			for _, port := range ports {
-				if port.Name == jc.Controller.GetDefaultContainerPortName(){
+				if port.Name == jc.Controller.GetDefaultContainerPortNumber(){
 					return port.ContainerPort, nil
 				}
 			}
@@ -215,9 +215,9 @@ func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, erro
 }
 
 // createNewService creates a new service for the given index and type.
-func (jc *JobController) createNewService(job metav1.Object, rtype commonv1.ReplicaType,
+func (jc *JobController) CreateNewService(job metav1.Object, rtype commonv1.ReplicaType,
 	spec *commonv1.ReplicaSpec, index string) error {
-	tfjobKey, err := KeyFunc(job)
+	jobKey, err := KeyFunc(job)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
 		return err
@@ -225,7 +225,7 @@ func (jc *JobController) createNewService(job metav1.Object, rtype commonv1.Repl
 
 	// Convert ReplicaType to lower string.
 	rt := strings.ToLower(string(rtype))
-	expectationServicesKey := GenExpectationServicesKey(tfjobKey, rt)
+	expectationServicesKey := GenExpectationServicesKey(jobKey, rt)
 	err = jc.Expectations.ExpectCreations(expectationServicesKey, 1)
 	if err != nil {
 		return err
@@ -247,7 +247,7 @@ func (jc *JobController) createNewService(job metav1.Object, rtype commonv1.Repl
 			Selector:  labels,
 			Ports: []v1.ServicePort{
 				{
-					Name: jc.Controller.GetDefaultContainerPortName(),
+					Name: jc.Controller.GetDefaultContainerPortNumber(),
 					Port: port,
 				},
 			},

@@ -24,7 +24,7 @@ const (
 	LabelGroupName    = "group-name"
 	LabelJobName      = "job-name"
 	LabelJobRole      = "job-role"
-	DefaultContainerPortName = "9999"
+	DefaultContainerPortNumber = "9999"
 )
 
 func isSucceeded(status common.JobStatus) bool {
