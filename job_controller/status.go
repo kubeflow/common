@@ -43,7 +43,7 @@ func hasCondition(status common.JobStatus, condType common.JobConditionType) boo
 	return false
 }
 
-func updateJobConditions(jobStatus *common.JobStatus, conditionType common.JobConditionType, reason, message string) error {
+func UpdateJobConditions(jobStatus *common.JobStatus, conditionType common.JobConditionType, reason, message string) error {
 	condition := newCondition(conditionType, reason, message)
 	setCondition(jobStatus, condition)
 	return nil

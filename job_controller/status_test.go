@@ -38,7 +38,7 @@ func TestUpdateJobConditions(t *testing.T) {
 	reason := "Job Created"
 	message := "Job Created"
 
-	err := updateJobConditions(&jobStatus, conditionType, reason, message)
+	err := UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Check JobCreated condition is appended
 		conditionInStatus := jobStatus.Conditions[0]
@@ -50,7 +50,7 @@ func TestUpdateJobConditions(t *testing.T) {
 	conditionType = v1.JobRunning
 	reason = "Job Running"
 	message = "Job Running"
-	err = updateJobConditions(&jobStatus, conditionType, reason, message)
+	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Check JobRunning condition is appended
 		conditionInStatus := jobStatus.Conditions[1]
@@ -62,7 +62,7 @@ func TestUpdateJobConditions(t *testing.T) {
 	conditionType = v1.JobRestarting
 	reason = "Job Restarting"
 	message = "Job Restarting"
-	err = updateJobConditions(&jobStatus, conditionType, reason, message)
+	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Check JobRunning condition is filtered out and JobRestarting state is appended
 		conditionInStatus := jobStatus.Conditions[1]
@@ -74,7 +74,7 @@ func TestUpdateJobConditions(t *testing.T) {
 	conditionType = v1.JobRunning
 	reason = "Job Running"
 	message = "Job Running"
-	err = updateJobConditions(&jobStatus, conditionType, reason, message)
+	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Again, Check JobRestarting condition is filtered and JobRestarting is appended
 		conditionInStatus := jobStatus.Conditions[1]
@@ -86,7 +86,7 @@ func TestUpdateJobConditions(t *testing.T) {
 	conditionType = v1.JobFailed
 	reason = "Job Failed"
 	message = "Job Failed"
-	err = updateJobConditions(&jobStatus, conditionType, reason, message)
+	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Check JobRunning condition is set to false
 		jobRunningCondition := jobStatus.Conditions[1]
