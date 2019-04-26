@@ -315,7 +315,7 @@ func (jc *JobController) ReconcilePods(
 
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
-			err = jc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
+			err = jc.CreateNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -349,8 +349,8 @@ func (jc *JobController) ReconcilePods(
 	return jc.Controller.UpdateJobStatus(job, replicas, *jobStatus, restart)
 }
 
-// createNewPod creates a new pod for the given index and type.
-func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *common.ReplicaSpec, masterRole bool,
+// CreateNewPod creates a new pod for the given index and type.
+func (jc *JobController) CreateNewPod(job interface{}, rt, index string, spec *common.ReplicaSpec, masterRole bool,
 	replicas map[common.ReplicaType]*common.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
