@@ -75,6 +75,9 @@ type ControllerInterface interface {
 	// UpdateJobStatus updates the job status and job conditions
 	UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, jobStatus commonv1.JobStatus, restart bool) error
 
+	// UpdateJobStatusInApiServer updates the job status in API server
+	UpdateJobStatusInApiServer(job interface{}, jobStatus *commonv1.JobStatus) error
+
 	// CreateService creates the service
 	CreateService(job interface{}, service *v1.Service) error
 
