@@ -46,12 +46,12 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		if _, ok := service.Labels[jc.Controller.GetReplicaTypeLabelKey()]; !ok {
+		if _, ok := service.Labels[ReplicaTypeLabel]; !ok {
 			log.Infof("This service maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtype := service.Labels[jc.Controller.GetReplicaTypeLabelKey()]
+		rtype := service.Labels[ReplicaTypeLabel]
 		expectationServicesKey := GenExpectationServicesKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
@@ -119,7 +119,7 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[jc.Controller.GetReplicaTypeLabelKey()] = replicaType
+	replicaSelector.MatchLabels[ReplicaTypeLabel] = replicaType
 
 	for _, service := range services {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -140,11 +140,11 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
 	serviceSlices := make([][]*v1.Service, replicas)
 	for _, service := range services {
-		if _, ok := service.Labels[jc.Controller.GetReplicaIndexLabelKey()]; !ok {
+		if _, ok := service.Labels[ReplicaIndexLabel]; !ok {
 			logger.Warning("The service do not have the index label.")
 			continue
 		}
-		index, err := strconv.Atoi(service.Labels[jc.Controller.GetReplicaIndexLabelKey()])
+		index, err := strconv.Atoi(service.Labels[ReplicaIndexLabel])
 		if err != nil {
 			logger.Warningf("Error when strconv.Atoi: %v", err)
 			continue

@@ -27,28 +27,8 @@ func (TestJobController) GetAPIGroupVersion() schema.GroupVersion {
 	return testv1.SchemeGroupVersion
 }
 
-func (TestJobController) GetGroupNameLabelKey() string {
-	return LabelGroupName
-}
-
-func (TestJobController) GetJobNameLabelKey() string {
-	return LabelJobName
-}
-
 func (TestJobController) GetGroupNameLabelValue() string {
 	return testv1.GroupName
-}
-
-func (TestJobController) GetReplicaTypeLabelKey() string {
-	return ReplicaTypeLabel
-}
-
-func (TestJobController) GetReplicaIndexLabelKey() string {
-	return ReplicaIndexLabel
-}
-
-func (TestJobController) GetJobRoleKey() string {
-	return LabelJobRole
 }
 
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
