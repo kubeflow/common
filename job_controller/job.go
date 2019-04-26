@@ -147,7 +147,7 @@ func (jc *JobController) ReconcileJobs(
 	}
 
 	// If the Job is terminated, delete all pods and services.
-	if isSucceeded(jobStatus) || isFailed(jobStatus) || jobExceedsLimit {
+	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) || jobExceedsLimit {
 		if err := jc.deletePodsAndServices(runPolicy, job, pods); err != nil {
 			return err
 		}
@@ -168,12 +168,12 @@ func (jc *JobController) ReconcileJobs(
 		}
 
 		if jobExceedsLimit {
-			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, JobFailedReason, failureMessage)
+			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
 			if jobStatus.CompletionTime == nil {
 				now := metav1.Now()
 				jobStatus.CompletionTime = &now
 			}
-			err := updateJobConditions(&jobStatus, common.JobFailed, JobFailedReason, failureMessage)
+			err := commonutil.UpdateJobConditions(&jobStatus, common.JobFailed, commonutil.JobFailedReason, failureMessage)
 			if err != nil {
 				log.Infof("Append job condition error: %v", err)
 				return err
@@ -183,7 +183,7 @@ func (jc *JobController) ReconcileJobs(
 		// At this point the pods may have been deleted.
 		// 1) If the job succeeded, we manually set the replica status.
 		// 2) If any replicas are still active, set their status to succeeded.
-		if isSucceeded(jobStatus) {
+		if commonutil.IsSucceeded(jobStatus) {
 			for rtype := range jobStatus.ReplicaStatuses {
 				jobStatus.ReplicaStatuses[rtype].Succeeded += jobStatus.ReplicaStatuses[rtype].Active
 				jobStatus.ReplicaStatuses[rtype].Active = 0
