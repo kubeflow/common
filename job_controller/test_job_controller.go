@@ -3,6 +3,7 @@ package job_controller
 import (
 	commonv1 "github.com/kubeflow/common/operator/v1"
 	testv1 "github.com/kubeflow/common/test_job/v1"
+	"github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,10 @@ func (TestJobController) GetAPIGroupVersion() schema.GroupVersion {
 
 func (TestJobController) GetGroupNameLabelValue() string {
 	return testv1.GroupName
+}
+
+func (TestJobController) GetJobRoleKey() string {
+	return util.LabelJobRole
 }
 
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {

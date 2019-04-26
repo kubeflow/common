@@ -379,7 +379,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 	labels[ReplicaIndexLabel] = index
 
 	if masterRole {
-		labels[LabelJobRole] = "master"
+		labels[commonutil.LabelJobRole] = "master"
 	}
 
 	podTemplate := spec.Template.DeepCopy()
