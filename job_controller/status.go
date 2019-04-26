@@ -15,7 +15,7 @@ func initializeReplicaStatuses(jobStatus *v1.JobStatus, rtype v1.ReplicaType) {
 }
 
 // updateJobReplicaStatuses updates the JobReplicaStatuses according to the pod.
-func updateJobReplicaStatuses(jobStatus *v1.JobStatus, rtype v1.ReplicaType, pod *v12.Pod) {
+func updateJobReplicaStatuses(jobStatus *v1.JobStatus, rtype v1.ReplicaType, pod *corev1.Pod) {
 	switch pod.Status.Phase {
 	case corev1.PodRunning:
 		jobStatus.ReplicaStatuses[rtype].Active++
