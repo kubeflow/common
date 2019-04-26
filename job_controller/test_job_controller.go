@@ -3,6 +3,7 @@ package job_controller
 import (
 	commonv1 "github.com/kubeflow/common/operator/v1"
 	testv1 "github.com/kubeflow/common/test_job/v1"
+	"github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,11 +29,11 @@ func (TestJobController) GetAPIGroupVersion() schema.GroupVersion {
 }
 
 func (TestJobController) GetGroupNameLabelKey() string {
-	return LabelGroupName
+	return util.LabelGroupName
 }
 
 func (TestJobController) GetJobNameLabelKey() string {
-	return LabelJobName
+	return util.LabelJobName
 }
 
 func (TestJobController) GetGroupNameLabelValue() string {
@@ -40,15 +41,15 @@ func (TestJobController) GetGroupNameLabelValue() string {
 }
 
 func (TestJobController) GetReplicaTypeLabelKey() string {
-	return ReplicaTypeLabel
+	return util.ReplicaTypeLabel
 }
 
 func (TestJobController) GetReplicaIndexLabelKey() string {
-	return ReplicaIndexLabel
+	return util.ReplicaIndexLabel
 }
 
 func (TestJobController) GetJobRoleKey() string {
-	return LabelJobRole
+	return util.LabelJobRole
 }
 
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
