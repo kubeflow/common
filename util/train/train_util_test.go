@@ -12,21 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+package train
 
-import (
-	"time"
-)
+import "testing"
 
-const (
-	TestImageName = "test-image-for-kubeflow-common:latest"
-	TestJobName   = "test-job"
-	LabelWorker   = "worker"
+func TestIsRetryableExitCode(t *testing.T) {
+	tcs := []struct {
+		ExitCode int32
+		Expected bool
+	}{
+		{
+			ExitCode: 1,
+			Expected: false,
+		},
+		{
+			ExitCode: 2,
+			Expected: false,
+		},
+		{
+			ExitCode: 3,
+			Expected: false,
+		},
+		{
+			ExitCode: 130,
+			Expected: true,
+		},
+		{
+			ExitCode: 138,
+			Expected: true,
+		},
+	}
 
-	SleepInterval = 500 * time.Millisecond
-	ThreadCount   = 1
-)
-
-var (
-	AlwaysReady = func() bool { return true }
-)
+	for _, tc := range tcs {
+		actual := IsRetryableExitCode(tc.ExitCode)
+		if actual != tc.Expected {
+			t.Errorf("ExitCode %d: Expected %t, got %t", tc.ExitCode, tc.Expected, actual)
+		}
+	}
+}

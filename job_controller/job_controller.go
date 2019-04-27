@@ -45,12 +45,6 @@ type ControllerInterface interface {
 	// Returns the GroupVersion of the API
 	GetAPIGroupVersion() schema.GroupVersion
 
-	// Returns the Group Name(key) in the labels of the job
-	GetGroupNameLabelKey() string
-
-	// Returns the Job Name(key) in the labels of the job
-	GetJobNameLabelKey() string
-
 	// Returns the Group Name(value) in the labels of the job
 	GetGroupNameLabelValue() string
 
@@ -59,9 +53,6 @@ type ControllerInterface interface {
 
 	// Returns the Replica Index(value) in the labels of the job
 	GetReplicaIndexLabelKey() string
-
-	// Returns the Job Role(key) in the labels of the job
-	GetJobRoleKey() string
 
 	// Returns the Job from Informer Cache
 	GetJobFromInformerCache(namespace, name string) (metav1.Object, error)
@@ -74,6 +65,9 @@ type ControllerInterface interface {
 
 	// UpdateJobStatus updates the job status and job conditions
 	UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, jobStatus commonv1.JobStatus, restart bool) error
+
+	// UpdateJobStatusInApiServer updates the job status in API server
+	UpdateJobStatusInApiServer(job interface{}, jobStatus *commonv1.JobStatus) error
 
 	// CreateService creates the service
 	CreateService(job interface{}, service *v1.Service) error
@@ -235,8 +229,8 @@ func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerRefer
 }
 
 func (jc *JobController) GenLabels(jobName string) map[string]string {
-	labelGroupName := jc.Controller.GetGroupNameLabelKey()
-	labelJobName := jc.Controller.GetJobNameLabelKey()
+	labelGroupName := LabelGroupName
+	labelJobName := LabelJobName
 	groupName := jc.Controller.GetGroupNameLabelValue()
 	return map[string]string{
 		labelGroupName: groupName,
@@ -271,7 +265,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas in
 
 // SyncPdb will create a PDB for gang scheduling by kube-batch.
 func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*v1beta1.PodDisruptionBudget, error) {
-	labelJobName := jc.Controller.GetJobNameLabelKey()
+	labelJobName := LabelJobName
 
 	// Check the pdb exist or not
 	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})

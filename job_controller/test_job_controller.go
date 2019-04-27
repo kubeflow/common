@@ -27,14 +27,6 @@ func (TestJobController) GetAPIGroupVersion() schema.GroupVersion {
 	return testv1.SchemeGroupVersion
 }
 
-func (TestJobController) GetGroupNameLabelKey() string {
-	return LabelGroupName
-}
-
-func (TestJobController) GetJobNameLabelKey() string {
-	return LabelJobName
-}
-
 func (TestJobController) GetGroupNameLabelValue() string {
 	return testv1.GroupName
 }
@@ -71,6 +63,10 @@ func (t *TestJobController) DeleteJob(job interface{}) error {
 
 func (t *TestJobController) UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
 	jobStatus commonv1.JobStatus, restart bool) error {
+	return nil
+}
+
+func (t *TestJobController) UpdateJobStatusInApiServer(job interface{}, jobStatus *commonv1.JobStatus) error {
 	return nil
 }
 
