@@ -186,7 +186,6 @@ func (jc *JobController) ReconcileServices(
 	for index, serviceSlice := range serviceSlices {
 		if len(serviceSlice) > 1 {
 			util.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
-			// TODO(gaocegege): Kill some services.
 		} else if len(serviceSlice) == 0 {
 			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
 			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
@@ -211,7 +210,7 @@ func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, erro
 			}
 		}
 	}
-	return -1, fmt.Errorf("failed to found the port")
+	return -1, fmt.Errorf("failed to find the port")
 }
 
 // createNewService creates a new service for the given index and type.
