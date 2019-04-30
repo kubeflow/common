@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util"
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
@@ -220,8 +221,8 @@ func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerRefer
 }
 
 func (jc *JobController) GenLabels(jobName string) map[string]string {
-	labelGroupName := LabelGroupName
-	labelJobName := LabelJobName
+	labelGroupName := util.LabelGroupName
+	labelJobName := util.LabelJobName
 	groupName := jc.Controller.GetGroupNameLabelValue()
 	return map[string]string{
 		labelGroupName: groupName,
@@ -256,7 +257,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas in
 
 // SyncPdb will create a PDB for gang scheduling by kube-batch.
 func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*v1beta1.PodDisruptionBudget, error) {
-	labelJobName := LabelJobName
+	labelJobName := util.LabelJobName
 
 	// Check the pdb exist or not
 	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
