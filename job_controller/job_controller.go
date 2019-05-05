@@ -191,6 +191,7 @@ func NewJobController(
 		EnableGangScheduling:     enableGangScheduling,
 	}
 
+
 	jc := JobController{
 		Controller:         controllerImpl,
 		Config:             jobControllerConfig,
@@ -202,8 +203,34 @@ func NewJobController(
 		WorkQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
 		Recorder:           recorder,
 	}
-	return jc
 
+	// Create pod informer.
+	podInformer := kubeInformerFactory.Core().V1().Pods()
+
+	// Set up an event handler for when pod resources change
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    jc.AddPod,
+		UpdateFunc: jc.UpdatePod,
+		DeleteFunc: jc.DeletePod,
+	})
+
+	jc.PodLister = podInformer.Lister()
+	jc.PodInformerSynced = podInformer.Informer().HasSynced
+
+	// Create service informer.
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
+
+	// Set up an event handler for when service resources change.
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    jc.AddService,
+		UpdateFunc: jc.UpdateService,
+		DeleteFunc: jc.DeleteService,
+	})
+
+	jc.ServiceLister = serviceInformer.Lister()
+	jc.ServiceInformerSynced = serviceInformer.Informer().HasSynced
+
+	return jc
 }
 
 func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerReference {
