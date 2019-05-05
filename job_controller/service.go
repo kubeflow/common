@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/kubeflow/common/operator/v1"
-	"github.com/kubeflow/common/util"
+	commonutil "github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -51,12 +51,12 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		if _, ok := service.Labels[ReplicaTypeLabel]; !ok {
+		if _, ok := service.Labels[commonutil.ReplicaTypeLabel]; !ok {
 			log.Infof("This service maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtype := service.Labels[ReplicaTypeLabel]
+		rtype := service.Labels[commonutil.ReplicaTypeLabel]
 		expectationServicesKey := GenExpectationServicesKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
@@ -124,7 +124,7 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[ReplicaTypeLabel] = replicaType
+	replicaSelector.MatchLabels[commonutil.ReplicaTypeLabel] = replicaType
 
 	for _, service := range services {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -145,11 +145,11 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
 	serviceSlices := make([][]*v1.Service, replicas)
 	for _, service := range services {
-		if _, ok := service.Labels[ReplicaIndexLabel]; !ok {
+		if _, ok := service.Labels[commonutil.ReplicaIndexLabel]; !ok {
 			logger.Warning("The service do not have the index label.")
 			continue
 		}
-		index, err := strconv.Atoi(service.Labels[ReplicaIndexLabel])
+		index, err := strconv.Atoi(service.Labels[commonutil.ReplicaIndexLabel])
 		if err != nil {
 			logger.Warningf("Error when strconv.Atoi: %v", err)
 			continue
@@ -181,13 +181,13 @@ func (jc *JobController) ReconcileServices(
 		return err
 	}
 
-	serviceSlices := jc.GetServiceSlices(services, replicas, util.LoggerForReplica(job, rt))
+	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
 
 	for index, serviceSlice := range serviceSlices {
 		if len(serviceSlice) > 1 {
-			util.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
+			commonutil.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
 		} else if len(serviceSlice) == 0 {
-			util.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
+			commonutil.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
 			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err

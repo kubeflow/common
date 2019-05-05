@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/kubeflow/common/operator/v1"
+	"github.com/kubeflow/common/util"
 	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
@@ -115,28 +116,28 @@ type JobController struct {
 
 	Config JobControllerConfiguration
 
-	// podControl is used to add or delete pods.
+	// PodControl is used to add or delete pods.
 	PodControl controller.PodControlInterface
 
-	// serviceControl is used to add or delete services.
+	// ServiceControl is used to add or delete services.
 	ServiceControl ServiceControlInterface
 
-	// kubeClientSet is a standard kubernetes clientset.
+	// KubeClientSet is a standard kubernetes clientset.
 	KubeClientSet kubeclientset.Interface
 
-	//KubeBatchClientSet is a standard kube-batch clientset.
+	// KubeBatchClientSet is a standard kube-batch clientset.
 	KubeBatchClientSet kubebatchclient.Interface
 
-	// podLister can list/get pods from the shared informer's store.
+	// PodLister can list/get pods from the shared informer's store.
 	PodLister corelisters.PodLister
 
-	// serviceLister can list/get services from the shared informer's store.
+	// ServiceLister can list/get services from the shared informer's store.
 	ServiceLister corelisters.ServiceLister
 
-	// podInformerSynced returns true if the pod store has been synced at least once.
+	// PodInformerSynced returns true if the pod store has been synced at least once.
 	PodInformerSynced cache.InformerSynced
 
-	// serviceInformerSynced returns true if the service store has been synced at least once.
+	// ServiceInformerSynced returns true if the service store has been synced at least once.
 	ServiceInformerSynced cache.InformerSynced
 
 	// A TTLCache of pod/services creates/deletes each job expects to see
@@ -157,14 +158,14 @@ type JobController struct {
 	// - "tf-operator/tfjob-abc/worker/pods", expects 4 adds.
 	Expectations controller.ControllerExpectationsInterface
 
-	// workQueue is a rate limited work queue. This is used to queue work to be
+	// WorkQueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
 	WorkQueue workqueue.RateLimitingInterface
 
-	// recorder is an event recorder for recording Event resources to the
+	// Recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	Recorder record.EventRecorder
 }
@@ -229,8 +230,8 @@ func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerRefer
 }
 
 func (jc *JobController) GenLabels(jobName string) map[string]string {
-	labelGroupName := LabelGroupName
-	labelJobName := LabelJobName
+	labelGroupName := util.LabelGroupName
+	labelJobName := util.LabelJobName
 	groupName := jc.Controller.GetGroupNameLabelValue()
 	return map[string]string{
 		labelGroupName: groupName,
@@ -265,7 +266,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas in
 
 // SyncPdb will create a PDB for gang scheduling by kube-batch.
 func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*v1beta1.PodDisruptionBudget, error) {
-	labelJobName := LabelJobName
+	labelJobName := util.LabelJobName
 
 	// Check the pdb exist or not
 	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
