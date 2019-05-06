@@ -202,7 +202,6 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		// TODO(terrytangyuan): Uncomment this once service reconciliation logic is in place
 		err = jc.ReconcileServices(metaObject, services, rtype, spec)
 
 		if err != nil {
