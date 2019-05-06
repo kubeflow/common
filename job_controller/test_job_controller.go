@@ -1,19 +1,64 @@
+// Copyright 2019 The Kubeflow Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package job_controller
 
 import (
+	jobclientset "github.com/kubeflow/common/client/clientset/versioned"
 	commonv1 "github.com/kubeflow/common/operator/v1"
 	testv1 "github.com/kubeflow/common/test_job/v1"
 	"github.com/kubeflow/common/util"
+	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kubeinformers "k8s.io/client-go/informers"
+	kubeclientset "k8s.io/client-go/kubernetes"
+	"time"
 )
 
 type TestJobController struct {
+	jobClientSet jobclientset.Interface
+	JobController
 	job      *testv1.TestJob
 	pods     []*corev1.Pod
 	services []*corev1.Service
+}
+
+func NewTestJobController(
+	kubeClientSet kubeclientset.Interface,
+	kubeBatchClientSet kubebatchclient.Interface,
+	jobClientSet jobclientset.Interface,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	enableGangScheduling bool,
+) *TestJobController {
+	log.Info("Creating TestJob controller")
+	// Create TestController.
+	tc := &TestJobController{
+		jobClientSet: jobClientSet,
+	}
+
+	// Create base controller
+	log.Info("Creating Job controller")
+	jc := NewJobController(tc, v1.Duration{Duration: 15 * time.Second},
+		enableGangScheduling,
+		kubeClientSet, kubeBatchClientSet, kubeInformerFactory,
+		testv1.Plural)
+	tc.JobController = jc
+
+	return tc
 }
 
 func (TestJobController) ControllerName() string {
