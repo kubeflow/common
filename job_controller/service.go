@@ -232,8 +232,8 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype commonv1.Repl
 
 	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
 	labels := jc.GenLabels(job.GetName())
-	labels[jc.Controller.GetReplicaTypeLabelKey()] = rt
-	labels[jc.Controller.GetReplicaIndexLabelKey()] = index
+	labels[commonutil.ReplicaTypeLabel] = rt
+	labels[commonutil.ReplicaIndexLabel] = index
 
 	port, err := jc.GetPortFromJob(spec)
 	if err != nil {

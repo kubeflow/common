@@ -49,12 +49,6 @@ type ControllerInterface interface {
 	// Returns the Group Name(value) in the labels of the job
 	GetGroupNameLabelValue() string
 
-	// Returns the Replica Type(key) in the labels of the job
-	GetReplicaTypeLabelKey() string
-
-	// Returns the Replica Index(value) in the labels of the job
-	GetReplicaIndexLabelKey() string
-
 	// Returns the Job from Informer Cache
 	GetJobFromInformerCache(namespace, name string) (metav1.Object, error)
 

@@ -32,14 +32,6 @@ func (TestJobController) GetGroupNameLabelValue() string {
 	return testv1.GroupName
 }
 
-func (TestJobController) GetReplicaTypeLabelKey() string {
-	return util.ReplicaTypeLabel
-}
-
-func (TestJobController) GetReplicaIndexLabelKey() string {
-	return util.ReplicaIndexLabel
-}
-
 func (TestJobController) GetJobRoleKey() string {
 	return util.LabelJobRole
 }
