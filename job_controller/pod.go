@@ -346,7 +346,7 @@ func (jc *JobController) ReconcilePods(
 			updateJobReplicaStatuses(jobStatus, rtype, pod)
 		}
 	}
-	return jc.Controller.UpdateJobStatus(job, replicas, *jobStatus, restart)
+	return jc.Controller.UpdateJobStatus(job, rtype, replicas[rtype], *jobStatus, restart)
 }
 
 // createNewPod creates a new pod for the given index and type.

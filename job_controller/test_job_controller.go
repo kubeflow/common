@@ -50,7 +50,7 @@ func (t *TestJobController) DeleteJob(job interface{}) error {
 	return nil
 }
 
-func (t *TestJobController) UpdateJobStatus(job interface{}, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
+func (t *TestJobController) UpdateJobStatus(job interface{}, rtype commonv1.ReplicaType, replica *commonv1.ReplicaSpec,
 	jobStatus commonv1.JobStatus, restart bool) error {
 	return nil
 }
