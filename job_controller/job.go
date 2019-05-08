@@ -214,7 +214,7 @@ func (jc *JobController) ReconcileJobs(
 
 	err = jc.Controller.UpdateJobStatus(job, replicas, &jobStatus)
 	if err != nil {
-		log.Warn("UpdateJobStatus error %v", err)
+		log.Warnf("UpdateJobStatus error %v", err)
 		return err
 	}
 	// No need to update the job status if the status hasn't changed since last time.
