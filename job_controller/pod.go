@@ -301,7 +301,6 @@ func (jc *JobController) ReconcilePods(
 		return err
 	}
 	numReplicas := int(*spec.Replicas)
-	restart := false
 	var masterRole bool
 
 	initializeReplicaStatuses(jobStatus, rtype)
@@ -339,14 +338,13 @@ func (jc *JobController) ReconcilePods(
 					if err := jc.Controller.DeletePod(job, pod); err != nil {
 						return err
 					}
-					restart = true
 				}
 			}
 
 			updateJobReplicaStatuses(jobStatus, rtype, pod)
 		}
 	}
-	return jc.Controller.UpdateJobStatus(job, rtype, replicas[rtype], *jobStatus, restart)
+	return nil
 }
 
 // createNewPod creates a new pod for the given index and type.

@@ -197,7 +197,7 @@ func (jc *JobController) ReconcileJobs(
 
 	// Diff current active pods/services with replicas.
 	for rtype, spec := range replicas {
-		err = jc.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicasStatus, replicas)
+		err := jc.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicasStatus, replicas)
 		if err != nil {
 			log.Warnf("ReconcilePods error %v", err)
 			return err
@@ -212,6 +212,11 @@ func (jc *JobController) ReconcileJobs(
 		// }
 	}
 
+	err = jc.Controller.UpdateJobStatus(job, replicas, &jobStatus)
+	if err != nil {
+		log.Warn("UpdateJobStatus error %v", err)
+		return err
+	}
 	// No need to update the job status if the status hasn't changed since last time.
 	if !reflect.DeepEqual(*oldStatus, jobStatus) {
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
