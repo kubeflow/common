@@ -100,13 +100,12 @@ func (jc *JobController) ReconcileJobs(
 		return err
 	}
 
-	// TODO(terrytangyuan): Uncomment this once service reconciliation logic is in place
-	// services, err := jc.GetServicesForJob(metaObject)
-	//
-	// if err != nil {
-	// 	log.Warnf("GetServicesForJob error %v", err)
-	// 	return err
-	// }
+	services, err := jc.GetServicesForJob(metaObject)
+
+	if err != nil {
+		log.Warnf("GetServicesForJob error %v", err)
+		return err
+	}
 
 	// retrieve the previous number of retry
 	previousRetry := jc.WorkQueue.NumRequeues(jobKey)
@@ -203,13 +202,12 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		// TODO(terrytangyuan): Uncomment this once service reconciliation logic is in place
-		// err = jc.ReconcileServices(metaObject, services, rtype, spec)
-		//
-		// if err != nil {
-		// 	log.Warnf("ReconcileServices error %v", err)
-		// 	return err
-		// }
+		err = jc.ReconcileServices(metaObject, services, rtype, spec)
+
+		if err != nil {
+			log.Warnf("ReconcileServices error %v", err)
+			return err
+		}
 	}
 
 	// No need to update the job status if the status hasn't changed since last time.

@@ -36,6 +36,10 @@ func (TestJobController) GetJobRoleKey() string {
 	return util.LabelJobRole
 }
 
+func (TestJobController) GetDefaultContainerPortNumber() string {
+	return "9999"
+}
+
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
 	return t.job, nil
 }
