@@ -23,7 +23,6 @@ func (t TestJobController) GetPodsForJob(job interface{}) ([]*corev1.Pod, error)
 }
 
 func (t TestJobController) GetServicesForJob(job interface{}) ([]*corev1.Service, error) {
-	panic("implement me")
 	return []*corev1.Service{}, nil
 }
 
