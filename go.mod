@@ -34,11 +34,11 @@ require (
 	gopkg.in/square/go-jose.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	k8s.io/api v0.0.0-20180712090710-2d6f90ab1293
-	k8s.io/apiextensions-apiserver v0.0.0-20180808065829-408db4a50408
+	k8s.io/apiextensions-apiserver v0.0.0-20180808065829-408db4a50408 // indirect
 	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/apiserver v0.0.0-20180808060109-1844acd6a035
+	k8s.io/apiserver v0.0.0-20180808060109-1844acd6a035 // indirect
 	k8s.io/client-go v0.0.0-20180806134042-1f13a808da65
-	k8s.io/code-generator v0.0.0-20180621065459-6702109cc68e
+	k8s.io/code-generator v0.0.0-20180621065459-6702109cc68e // indirect
 	k8s.io/kube-openapi v0.0.0-20180509051136-39cb288412c4
 	k8s.io/kubernetes v1.11.2
 	sigs.k8s.io/yaml v1.1.0 // indirect
