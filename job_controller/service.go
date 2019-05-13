@@ -253,6 +253,7 @@ func (jc *JobController) createServices(namespace string, service *v1.Service, o
 		return fmt.Errorf("unable to create Services, no labels")
 	}
 	serviceWithOwner, err := getServiceFromTemplate(service, object, controllerRef)
+	serviceWithOwner.Namespace = namespace
 	if err != nil {
 		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)

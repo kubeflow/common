@@ -415,6 +415,7 @@ func (jc *JobController) createPodWithControllerRef(namespace string, template *
 
 func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodTemplateSpec, object runtime.Object, controllerRef *metav1.OwnerReference) error {
 	pod, err := GetPodFromTemplate(template, object, controllerRef)
+	pod.Namespace = namespace
 	if err != nil {
 		return err
 	}
