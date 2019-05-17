@@ -10,10 +10,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var _  ControllerInterface = &TestJobController{}
+
 type TestJobController struct {
 	job      *testv1.TestJob
 	pods     []*corev1.Pod
 	services []*corev1.Service
+}
+
+func (t TestJobController) GetPodsForJob(job interface{}) ([]*corev1.Pod, error) {
+	return []*corev1.Pod{}, nil
+}
+
+func (t TestJobController) GetServicesForJob(job interface{}) ([]*corev1.Service, error) {
+	return []*corev1.Service{}, nil
 }
 
 func (TestJobController) ControllerName() string {
@@ -78,7 +88,7 @@ func (t *TestJobController) DeleteService(job interface{}, name string, namespac
 	return nil
 }
 
-func (t *TestJobController) CreatePod(job interface{}, podTemplate *corev1.PodTemplateSpec) error {
+func (t *TestJobController) CreatePod(job interface{}, pod *corev1.Pod) error {
 	return nil
 }
 

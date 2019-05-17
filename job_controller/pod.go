@@ -20,9 +20,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/glog"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -191,41 +193,6 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	jc.WorkQueue.Add(jobKey)
 }
 
-// getPodsForJob returns the set of pods that this job should manage.
-// It also reconciles ControllerRef by adopting/orphaning.
-// Note that the returned Pods are pointers into the cache.
-func (jc *JobController) GetPodsForJob(job metav1.Object) ([]*v1.Pod, error) {
-	// Create selector.
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: jc.GenLabels(job.GetName()),
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("couldn't convert Job selector: %v", err)
-	}
-	// List all pods to include those that don't match the selector anymore
-	// but have a ControllerRef pointing to this controller.
-	pods, err := jc.PodLister.Pods(job.GetNamespace()).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	// If any adoptions are attempted, we should first recheck for deletion
-	// with an uncached quorum read sometime after listing Pods (see #42639).
-
-	canAdoptFunc := RecheckDeletionTimestamp(func() (metav1.Object, error) {
-		fresh, err := jc.Controller.GetJobFromAPIClient(job.GetNamespace(), job.GetName())
-		if err != nil {
-			return nil, err
-		}
-		if fresh.GetUID() != job.GetUID() {
-			return nil, fmt.Errorf("original Job %v/%v is gone: got uid %v, wanted %v", job.GetNamespace(), job.GetName(), fresh.GetUID(), job.GetUID())
-		}
-		return fresh, nil
-	})
-	cm := controller.NewPodControllerRefManager(jc.PodControl, job, selector, jc.Controller.GetAPIGroupVersionKind(), canAdoptFunc)
-	return cm.ClaimPods(pods)
-}
 
 // FilterPodsForReplicaType returns pods belong to a replicaType.
 func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
@@ -418,8 +385,9 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 			podTemplate.Spec.SchedulerName = gangSchedulerName
 		}
 	}
+	controllerRef := jc.GenOwnerReference(metaObject)
 
-	err = jc.Controller.CreatePod(job, podTemplate)
+	err = jc.createPodWithControllerRef(metaObject.GetNamespace(), podTemplate, runtimeObject, controllerRef)
 	if err != nil && errors.IsTimeout(err) {
 		// Pod is created but its initialization has timed out.
 		// If the initialization is successful eventually, the
@@ -431,6 +399,41 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *c
 		return nil
 	} else if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (jc *JobController) createPodWithControllerRef(namespace string, template *v1.PodTemplateSpec,
+	controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
+	if err := validateControllerRef(controllerRef); err != nil {
+		return err
+	}
+	return jc.createPod("", namespace, template, controllerObject, controllerRef)
+}
+
+func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodTemplateSpec, object runtime.Object, controllerRef *metav1.OwnerReference) error {
+	pod, err := GetPodFromTemplate(template, object, controllerRef)
+	pod.Namespace = namespace
+	if err != nil {
+		return err
+	}
+	if len(nodeName) != 0 {
+		pod.Spec.NodeName = nodeName
+	}
+	if labels.Set(pod.Labels).AsSelectorPreValidated().Empty() {
+		return fmt.Errorf("unable to create pods, no labels")
+	}
+	if err := jc.Controller.CreatePod(object, pod); err != nil {
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
+		return err
+	} else {
+		accessor, err := meta.Accessor(object)
+		if err != nil {
+			glog.Errorf("parentObject does not have ObjectMeta, %v", err)
+			return nil
+		}
+		glog.V(4).Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
+		jc.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
 	}
 	return nil
 }
