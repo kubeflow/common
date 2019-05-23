@@ -3,13 +3,13 @@ package job_controller
 import (
 	"testing"
 
-	"github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func TestUpdateJobReplicaStatuses(t *testing.T) {
-	jobStatus := v1.JobStatus{}
+	jobStatus := apiv1.JobStatus{}
 	initializeReplicaStatuses(&jobStatus, "worker")
 	_, ok := jobStatus.ReplicaStatuses["worker"]
 	// assert ReplicaStatus for "worker" exists
@@ -20,7 +20,7 @@ func TestUpdateJobReplicaStatuses(t *testing.T) {
 	assert.Equal(t, jobStatus.ReplicaStatuses["worker"].Active, int32(1))
 }
 
-func setStatusForTest(jobStatus *v1.JobStatus, rtype v1.ReplicaType, failed, succeeded, active int32) {
+func setStatusForTest(jobStatus *apiv1.JobStatus, rtype apiv1.ReplicaType, failed, succeeded, active int32) {
 	pod := corev1.Pod{
 		Status: corev1.PodStatus{
 		},

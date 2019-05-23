@@ -3,7 +3,7 @@ package job_controller
 import (
 	"testing"
 
-	common "github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	testjobv1 "github.com/kubeflow/common/test_job/v1"
 	testutilv1 "github.com/kubeflow/common/test_util/v1"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ func TestSetRestartPolicy(t *testing.T) {
 	testCase := []tc{
 		func() tc {
 			tj := testutilv1.NewTestJob(2)
-			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = common.RestartPolicyExitCode
+			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = apiv1.RestartPolicyExitCode
 			return tc{
 				testJob:               tj,
 				expectedRestartPolicy: v1.RestartPolicyNever,
@@ -28,7 +28,7 @@ func TestSetRestartPolicy(t *testing.T) {
 		}(),
 		func() tc {
 			tj := testutilv1.NewTestJob(2)
-			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = common.RestartPolicyNever
+			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = apiv1.RestartPolicyNever
 			return tc{
 				testJob:               tj,
 				expectedRestartPolicy: v1.RestartPolicyNever,
@@ -37,7 +37,7 @@ func TestSetRestartPolicy(t *testing.T) {
 		}(),
 		func() tc {
 			tj := testutilv1.NewTestJob(2)
-			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = common.RestartPolicyAlways
+			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = apiv1.RestartPolicyAlways
 			return tc{
 				testJob:               tj,
 				expectedRestartPolicy: v1.RestartPolicyAlways,
@@ -46,7 +46,7 @@ func TestSetRestartPolicy(t *testing.T) {
 		}(),
 		func() tc {
 			tj := testutilv1.NewTestJob(2)
-			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = common.RestartPolicyOnFailure
+			tj.Spec.TestReplicaSpecs[testjobv1.TestReplicaTypeWorker].RestartPolicy = apiv1.RestartPolicyOnFailure
 			return tc{
 				testJob:               tj,
 				expectedRestartPolicy: v1.RestartPolicyOnFailure,
@@ -65,10 +65,10 @@ func TestSetRestartPolicy(t *testing.T) {
 }
 
 func TestIsNonGangSchedulerSet(t *testing.T) {
-	replicaSpecs := map[common.ReplicaType]*common.ReplicaSpec{}
+	replicaSpecs := map[apiv1.ReplicaType]*apiv1.ReplicaSpec{}
 	assert.False(t, isNonGangSchedulerSet(replicaSpecs))
 
-	replicaSpecs[common.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &common.ReplicaSpec{
+	replicaSpecs[apiv1.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &apiv1.ReplicaSpec{
 		Template: v1.PodTemplateSpec{
 			Spec: v1.PodSpec{
 				SchedulerName: gangSchedulerName,
@@ -77,7 +77,7 @@ func TestIsNonGangSchedulerSet(t *testing.T) {
 	}
 	assert.False(t, isNonGangSchedulerSet(replicaSpecs))
 
-	replicaSpecs[common.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &common.ReplicaSpec{
+	replicaSpecs[apiv1.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &apiv1.ReplicaSpec{
 		Template: v1.PodTemplateSpec{
 			Spec: v1.PodSpec{
 				SchedulerName: "other-scheduler",

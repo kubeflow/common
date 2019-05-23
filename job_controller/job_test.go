@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	common "github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	"github.com/kubeflow/common/test_job/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -14,24 +14,24 @@ import (
 
 func TestDeletePodsAndServices(T *testing.T) {
 	type testCase struct {
-		cleanPodPolicy               common.CleanPodPolicy
+		cleanPodPolicy               apiv1.CleanPodPolicy
 		deleteRunningPodAndService   bool
 		deleteSucceededPodAndService bool
 	}
 
 	var testcase = []testCase{
 		{
-			cleanPodPolicy:               common.CleanPodPolicyRunning,
+			cleanPodPolicy:               apiv1.CleanPodPolicyRunning,
 			deleteRunningPodAndService:   true,
 			deleteSucceededPodAndService: false,
 		},
 		{
-			cleanPodPolicy:               common.CleanPodPolicyAll,
+			cleanPodPolicy:               apiv1.CleanPodPolicyAll,
 			deleteRunningPodAndService:   true,
 			deleteSucceededPodAndService: true,
 		},
 		{
-			cleanPodPolicy:               common.CleanPodPolicyNone,
+			cleanPodPolicy:               apiv1.CleanPodPolicyNone,
 			deleteRunningPodAndService:   false,
 			deleteSucceededPodAndService: false,
 		},
@@ -45,15 +45,15 @@ func TestDeletePodsAndServices(T *testing.T) {
 		succeededPodService := newService("succeededPod")
 		allServices := []*corev1.Service{runningPodService, succeededPodService}
 
-		testJobController := TestJobController{
-			pods:     allPods,
-			services: allServices,
+		testJobController := v1.TestJobController{
+			Pods:     allPods,
+			Services: allServices,
 		}
 
 		mainJobController := JobController{
 			Controller: &testJobController,
 		}
-		runPolicy := common.RunPolicy{
+		runPolicy := apiv1.RunPolicy{
 			CleanPodPolicy: &tc.cleanPodPolicy,
 		}
 
@@ -63,22 +63,22 @@ func TestDeletePodsAndServices(T *testing.T) {
 		if assert.NoError(T, err) {
 			if tc.deleteRunningPodAndService {
 				// should delete the running pod and its service
-				assert.NotContains(T, testJobController.pods, runningPod)
-				assert.NotContains(T, testJobController.services, runningPodService)
+				assert.NotContains(T, testJobController.Pods, runningPod)
+				assert.NotContains(T, testJobController.Services, runningPodService)
 			} else {
 				// should NOT delete the running pod and its service
-				assert.Contains(T, testJobController.pods, runningPod)
-				assert.Contains(T, testJobController.services, runningPodService)
+				assert.Contains(T, testJobController.Pods, runningPod)
+				assert.Contains(T, testJobController.Services, runningPodService)
 			}
 
 			if tc.deleteSucceededPodAndService {
 				// should delete the SUCCEEDED pod and its service
-				assert.NotContains(T, testJobController.pods, succeededPod)
-				assert.NotContains(T, testJobController.services, succeededPodService)
+				assert.NotContains(T, testJobController.Pods, succeededPod)
+				assert.NotContains(T, testJobController.Services, succeededPodService)
 			} else {
 				// should NOT delete the SUCCEEDED pod and its service
-				assert.Contains(T, testJobController.pods, succeededPod)
-				assert.Contains(T, testJobController.services, succeededPodService)
+				assert.Contains(T, testJobController.Pods, succeededPod)
+				assert.Contains(T, testJobController.Services, succeededPodService)
 			}
 		}
 	}
@@ -102,14 +102,14 @@ func TestPastBackoffLimit(T *testing.T) {
 		succeededPod := newPod("succeededPod", corev1.PodSucceeded)
 		allPods := []*corev1.Pod{runningPod, succeededPod}
 
-		testJobController := TestJobController{
-			pods: allPods,
+		testJobController := v1.TestJobController{
+			Pods: allPods,
 		}
 
 		mainJobController := JobController{
 			Controller: &testJobController,
 		}
-		runPolicy := common.RunPolicy{
+		runPolicy := apiv1.RunPolicy{
 			BackoffLimit: &tc.backOffLimit,
 		}
 
@@ -140,15 +140,15 @@ func TestPastActiveDeadline(T *testing.T) {
 
 	for _, tc := range testcase {
 
-		testJobController := TestJobController{}
+		testJobController := v1.TestJobController{}
 
 		mainJobController := JobController{
 			Controller: &testJobController,
 		}
-		runPolicy := common.RunPolicy{
+		runPolicy := apiv1.RunPolicy{
 			ActiveDeadlineSeconds: &tc.activeDeadlineSeconds,
 		}
-		jobStatus := common.JobStatus{
+		jobStatus := apiv1.JobStatus{
 			StartTime: &metav1.Time{
 				Time: time.Now(),
 			},
@@ -163,20 +163,20 @@ func TestPastActiveDeadline(T *testing.T) {
 
 func TestCleanupJobIfTTL(T *testing.T) {
 	ttl := int32(0)
-	runPolicy := common.RunPolicy{
+	runPolicy := apiv1.RunPolicy{
 		TTLSecondsAfterFinished: &ttl,
 	}
 	oneDayAgo := time.Now()
 	// one day ago
 	oneDayAgo.AddDate(0, 0, -1)
-	jobStatus := common.JobStatus{
+	jobStatus := apiv1.JobStatus{
 		CompletionTime: &metav1.Time{
 			Time: oneDayAgo,
 		},
 	}
 
-	testJobController := &TestJobController{
-		job: &v1.TestJob{},
+	testJobController := &v1.TestJobController{
+		Job: &v1.TestJob{},
 	}
 	mainJobController := JobController{
 		Controller: testJobController,
@@ -186,23 +186,23 @@ func TestCleanupJobIfTTL(T *testing.T) {
 	err := mainJobController.cleanupJobIfTTL(&runPolicy, jobStatus, job)
 	if assert.NoError(T, err) {
 		// job field is zeroed
-		assert.Empty(T, testJobController.job)
+		assert.Empty(T, testJobController.Job)
 	}
 }
 
 func TestCleanupJob(T *testing.T) {
 	ttl := int32(0)
-	runPolicy := common.RunPolicy{
+	runPolicy := apiv1.RunPolicy{
 		TTLSecondsAfterFinished: &ttl,
 	}
-	jobStatus := common.JobStatus{
+	jobStatus := apiv1.JobStatus{
 		CompletionTime: &metav1.Time{
 			Time: time.Now(),
 		},
 	}
 
-	testJobController := &TestJobController{
-		job: &v1.TestJob{},
+	testJobController := &v1.TestJobController{
+		Job: &v1.TestJob{},
 	}
 	mainJobController := JobController{
 		Controller: testJobController,
@@ -211,7 +211,7 @@ func TestCleanupJob(T *testing.T) {
 	var job interface{}
 	err := mainJobController.cleanupJob(&runPolicy, jobStatus, job)
 	if assert.NoError(T, err) {
-		assert.Empty(T, testJobController.job)
+		assert.Empty(T, testJobController.Job)
 	}
 }
 

@@ -17,10 +17,10 @@ package v1
 import (
 	"time"
 
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	common "github.com/kubeflow/common/operator/v1"
 	testjobv1 "github.com/kubeflow/common/test_job/v1"
 )
 
@@ -34,13 +34,13 @@ func NewTestJob(worker int) *testjobv1.TestJob {
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: testjobv1.TestJobSpec{
-			TestReplicaSpecs: make(map[testjobv1.TestReplicaType]*common.ReplicaSpec),
+			TestReplicaSpecs: make(map[testjobv1.TestReplicaType]*apiv1.ReplicaSpec),
 		},
 	}
 
 	if worker > 0 {
 		worker := int32(worker)
-		workerReplicaSpec := &common.ReplicaSpec{
+		workerReplicaSpec := &apiv1.ReplicaSpec{
 			Replicas: &worker,
 			Template: NewTestReplicaSpecTemplate(),
 		}
