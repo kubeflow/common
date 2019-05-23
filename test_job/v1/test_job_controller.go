@@ -1,20 +1,19 @@
-package job_controller
+package v1
 
 import (
 	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
-	testv1 "github.com/kubeflow/common/test_job/v1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _  apiv1.ControllerInterface = &TestJobController{}
+var _ apiv1.ControllerInterface = &TestJobController{}
 
 type TestJobController struct {
-	job      *testv1.TestJob
-	pods     []*corev1.Pod
-	services []*corev1.Service
+	Job      *TestJob
+	Pods     []*corev1.Pod
+	Services []*corev1.Service
 }
 
 func (t TestJobController) GetPodsForJob(job interface{}) ([]*corev1.Pod, error) {
@@ -30,15 +29,15 @@ func (TestJobController) ControllerName() string {
 }
 
 func (TestJobController) GetAPIGroupVersionKind() schema.GroupVersionKind {
-	return testv1.SchemeGroupVersionKind
+	return SchemeGroupVersionKind
 }
 
 func (TestJobController) GetAPIGroupVersion() schema.GroupVersion {
-	return testv1.SchemeGroupVersion
+	return SchemeGroupVersion
 }
 
 func (TestJobController) GetGroupNameLabelValue() string {
-	return testv1.GroupName
+	return GroupName
 }
 
 func (TestJobController) GetJobRoleKey() string {
@@ -50,20 +49,20 @@ func (TestJobController) GetDefaultContainerPortNumber() string {
 }
 
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
-	return t.job, nil
+	return t.Job, nil
 }
 
 func (t *TestJobController) GetJobFromAPIClient(namespace, name string) (v1.Object, error) {
-	return t.job, nil
+	return t.Job, nil
 }
 
 func (t *TestJobController) DeleteJob(job interface{}) error {
 	log.Info("Delete job")
-	t.job = nil
+	t.Job = nil
 	return nil
 }
 
-func (t TestJobController) UpdateJobStatus(job interface{}, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec,
+func (t *TestJobController) UpdateJobStatus(job interface{}, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec,
 	jobStatus apiv1.JobStatus) error {
 	return nil
 }
@@ -79,12 +78,12 @@ func (t *TestJobController) CreateService(job interface{}, service *corev1.Servi
 func (t *TestJobController) DeleteService(job interface{}, name string, namespace string) error {
 	log.Info("Deleting service " + name)
 	var remainingServices []*corev1.Service
-	for _, tservice := range t.services {
+	for _, tservice := range t.Services {
 		if tservice.Name != name {
 			remainingServices = append(remainingServices, tservice)
 		}
 	}
-	t.services = remainingServices
+	t.Services = remainingServices
 	return nil
 }
 
@@ -95,12 +94,12 @@ func (t *TestJobController) CreatePod(job interface{}, pod *corev1.Pod) error {
 func (t *TestJobController) DeletePod(job interface{}, pod *corev1.Pod) error {
 	log.Info("Deleting pod " + pod.Name)
 	var remainingPods []*corev1.Pod
-	for _, tpod := range t.pods {
+	for _, tpod := range t.Pods {
 		if tpod.Name != pod.Name {
 			remainingPods = append(remainingPods, tpod)
 		}
 	}
-	t.pods = remainingPods
+	t.Pods = remainingPods
 	return nil
 }
 

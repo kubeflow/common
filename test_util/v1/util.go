@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -69,7 +69,7 @@ func GetKey(testJob *testjobv1.TestJob, t *testing.T) string {
 	return key
 }
 
-func CheckCondition(testJob *testjobv1.TestJob, condition common.JobConditionType, reason string) bool {
+func CheckCondition(testJob *testjobv1.TestJob, condition apiv1.JobConditionType, reason string) bool {
 	for _, v := range testJob.Status.Conditions {
 		if v.Type == condition && v.Status == v1.ConditionTrue && v.Reason == reason {
 			return true

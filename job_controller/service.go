@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	commonv1 "github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	commonutil "github.com/kubeflow/common/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
@@ -53,12 +53,12 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		if _, ok := service.Labels[commonutil.ReplicaTypeLabel]; !ok {
+		if _, ok := service.Labels[apiv1.ReplicaTypeLabel]; !ok {
 			log.Infof("This service maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtype := service.Labels[commonutil.ReplicaTypeLabel]
+		rtype := service.Labels[apiv1.ReplicaTypeLabel]
 		expectationServicesKey := GenExpectationServicesKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
@@ -91,7 +91,7 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[commonutil.ReplicaTypeLabel] = replicaType
+	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = replicaType
 
 	for _, service := range services {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -112,11 +112,11 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
 	serviceSlices := make([][]*v1.Service, replicas)
 	for _, service := range services {
-		if _, ok := service.Labels[commonutil.ReplicaIndexLabel]; !ok {
+		if _, ok := service.Labels[apiv1.ReplicaIndexLabel]; !ok {
 			logger.Warning("The service do not have the index label.")
 			continue
 		}
-		index, err := strconv.Atoi(service.Labels[commonutil.ReplicaIndexLabel])
+		index, err := strconv.Atoi(service.Labels[apiv1.ReplicaIndexLabel])
 		if err != nil {
 			logger.Warningf("Error when strconv.Atoi: %v", err)
 			continue
@@ -135,8 +135,8 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 func (jc *JobController) ReconcileServices(
 	job metav1.Object,
 	services []*v1.Service,
-	rtype commonv1.ReplicaType,
-	spec *commonv1.ReplicaSpec) error {
+	rtype apiv1.ReplicaType,
+	spec *apiv1.ReplicaSpec) error {
 
 	// Convert ReplicaType to lower string.
 	rt := strings.ToLower(string(rtype))
@@ -165,7 +165,7 @@ func (jc *JobController) ReconcileServices(
 }
 
 // GetPortFromJob gets the port of job container.
-func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, error) {
+func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (int32, error) {
 	containers := spec.Template.Spec.Containers
 	for _, container := range containers {
 		if container.Name == jc.Controller.GetDefaultContainerName() {
@@ -181,8 +181,8 @@ func (jc *JobController) GetPortFromJob(spec *commonv1.ReplicaSpec) (int32, erro
 }
 
 // createNewService creates a new service for the given index and type.
-func (jc *JobController) CreateNewService(job metav1.Object, rtype commonv1.ReplicaType,
-	spec *commonv1.ReplicaSpec, index string) error {
+func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.ReplicaType,
+	spec *apiv1.ReplicaSpec, index string) error {
 	jobKey, err := KeyFunc(job)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
@@ -199,8 +199,8 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype commonv1.Repl
 
 	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
 	labels := jc.GenLabels(job.GetName())
-	labels[commonutil.ReplicaTypeLabel] = rt
-	labels[commonutil.ReplicaIndexLabel] = index
+	labels[apiv1.ReplicaTypeLabel] = rt
+	labels[apiv1.ReplicaIndexLabel] = index
 
 	port, err := jc.GetPortFromJob(spec)
 	if err != nil {

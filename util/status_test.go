@@ -3,16 +3,16 @@ package util
 import (
 	"testing"
 
-	"github.com/kubeflow/common/operator/v1"
+	apiv1 "github.com/kubeflow/common/job_controller/api/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func TestIsSucceeded(t *testing.T) {
-	jobStatus := v1.JobStatus{
-		Conditions: []v1.JobCondition{
+	jobStatus := apiv1.JobStatus{
+		Conditions: []apiv1.JobCondition{
 			{
-				Type:   v1.JobSucceeded,
+				Type:   apiv1.JobSucceeded,
 				Status: corev1.ConditionTrue,
 			},
 		},
@@ -21,10 +21,10 @@ func TestIsSucceeded(t *testing.T) {
 }
 
 func TestIsFailed(t *testing.T) {
-	jobStatus := v1.JobStatus{
-		Conditions: []v1.JobCondition{
+	jobStatus := apiv1.JobStatus{
+		Conditions: []apiv1.JobCondition{
 			{
-				Type:   v1.JobFailed,
+				Type:   apiv1.JobFailed,
 				Status: corev1.ConditionTrue,
 			},
 		},
@@ -33,8 +33,8 @@ func TestIsFailed(t *testing.T) {
 }
 
 func TestUpdateJobConditions(t *testing.T) {
-	jobStatus := v1.JobStatus{}
-	conditionType := v1.JobCreated
+	jobStatus := apiv1.JobStatus{}
+	conditionType := apiv1.JobCreated
 	reason := "Job Created"
 	message := "Job Created"
 
@@ -47,7 +47,7 @@ func TestUpdateJobConditions(t *testing.T) {
 		assert.Equal(t, conditionInStatus.Message, message)
 	}
 
-	conditionType = v1.JobRunning
+	conditionType = apiv1.JobRunning
 	reason = "Job Running"
 	message = "Job Running"
 	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
@@ -59,7 +59,7 @@ func TestUpdateJobConditions(t *testing.T) {
 		assert.Equal(t, conditionInStatus.Message, message)
 	}
 
-	conditionType = v1.JobRestarting
+	conditionType = apiv1.JobRestarting
 	reason = "Job Restarting"
 	message = "Job Restarting"
 	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
@@ -71,7 +71,7 @@ func TestUpdateJobConditions(t *testing.T) {
 		assert.Equal(t, conditionInStatus.Message, message)
 	}
 
-	conditionType = v1.JobRunning
+	conditionType = apiv1.JobRunning
 	reason = "Job Running"
 	message = "Job Running"
 	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
@@ -83,14 +83,14 @@ func TestUpdateJobConditions(t *testing.T) {
 		assert.Equal(t, conditionInStatus.Message, message)
 	}
 
-	conditionType = v1.JobFailed
+	conditionType = apiv1.JobFailed
 	reason = "Job Failed"
 	message = "Job Failed"
 	err = UpdateJobConditions(&jobStatus, conditionType, reason, message)
 	if assert.NoError(t, err) {
 		// Check JobRunning condition is set to false
 		jobRunningCondition := jobStatus.Conditions[1]
-		assert.Equal(t, jobRunningCondition.Type, v1.JobRunning)
+		assert.Equal(t, jobRunningCondition.Type, apiv1.JobRunning)
 		assert.Equal(t, jobRunningCondition.Status, corev1.ConditionFalse)
 		// Check JobFailed state is appended
 		conditionInStatus := jobStatus.Conditions[2]
