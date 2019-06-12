@@ -213,7 +213,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 			Selector:  labels,
 			Ports: []v1.ServicePort{
 				{
-					Name: jc.Controller.GetDefaultContainerPortNumber(),
+					Name: jc.Controller.GetDefaultContainerPortName(),
 					Port: port,
 				},
 			},
