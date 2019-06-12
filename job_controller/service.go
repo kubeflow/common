@@ -171,7 +171,7 @@ func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (int32, error) 
 		if container.Name == jc.Controller.GetDefaultContainerName() {
 			ports := container.Ports
 			for _, port := range ports {
-				if port.Name == jc.Controller.GetDefaultContainerPortNumber(){
+				if port.Name == jc.Controller.GetDefaultContainerPortName(){
 					return port.ContainerPort, nil
 				}
 			}

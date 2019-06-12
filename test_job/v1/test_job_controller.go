@@ -44,8 +44,8 @@ func (TestJobController) GetJobRoleKey() string {
 	return apiv1.JobRoleLabel
 }
 
-func (TestJobController) GetDefaultContainerPortNumber() string {
-	return "9999"
+func (TestJobController) GetDefaultContainerPortName() string {
+	return "default-port-name"
 }
 
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
