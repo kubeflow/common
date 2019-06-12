@@ -48,6 +48,11 @@ func (TestJobController) GetDefaultContainerPortName() string {
 	return "default-port-name"
 }
 
+func (TestJobController) GetDefaultContainerPortNumber() int32 {
+	return int32(9999)
+}
+
+
 func (t *TestJobController) GetJobFromInformerCache(namespace, name string) (v1.Object, error) {
 	return t.Job, nil
 }
