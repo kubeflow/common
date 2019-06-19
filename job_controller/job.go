@@ -210,7 +210,7 @@ func (jc *JobController) ReconcileJobs(
 		}
 	}
 
-	err = jc.Controller.UpdateJobStatus(job, replicas, jobStatus)
+	err = jc.Controller.UpdateJobStatus(job, replicas, &jobStatus)
 	if err != nil {
 		log.Warnf("UpdateJobStatus error %v", err)
 		return err
