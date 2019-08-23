@@ -188,4 +188,8 @@ type RunPolicy struct {
 // job, for example `minAvailable` for gang-scheduling.
 type SchedulingPolicy struct {
 	MinAvailable *int32 `json:"minAvailable,omitempty"`
+
+	//add PriorityClassName
+	//PriorityClassName is a type of k8s resource.(kubectl get priorityclass)
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 }

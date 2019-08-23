@@ -40,7 +40,7 @@ func (jc *JobController) deletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 	}
 	return nil
 }
-
+// TTL means time to live
 func (jc *JobController) cleanupJobIfTTL(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
 	currentTime := time.Now()
 	metaObject, _ := job.(metav1.Object)
@@ -191,6 +191,16 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	}
 
+	if jc.Config.EnableGangScheduling {
+		minAvailableReplicas := getTotalReplicas(replicas)
+		priorityClassName := getPriorityClassName(runPolicy)
+		//_, err := pc.SyncPodGroup(job, minAvailableReplicas)
+		_, err := jc.SyncPodGroup(metaObject, minAvailableReplicas, priorityClassName)
+		if err != nil {
+			log.Warnf("Sync PodGroup %v: %v", jobName, err)
+		}
+	}
+
 	// Save the current state of the replicas
 	replicasStatus := make(map[string]v1.PodPhase)
 
@@ -298,4 +308,15 @@ func (jc *JobController) cleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 	}
 	jc.WorkQueue.AddRateLimited(key)
 	return nil
+}
+func getPriorityClassName(runPolicy *apiv1.RunPolicy) string {
+	priorityClassName := *runPolicy.SchedulingPolicy.PriorityClassName
+	return priorityClassName
+}
+func getTotalReplicas(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) int32 {
+	jobReplicas := int32(0)
+	for _, r := range replicas {
+		jobReplicas += *r.Replicas
+	}
+	return jobReplicas
 }
