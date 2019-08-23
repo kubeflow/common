@@ -1,6 +1,7 @@
 package job_controller
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -40,7 +41,6 @@ func (jc *JobController) deletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 	}
 	return nil
 }
-// TTL means time to live
 func (jc *JobController) cleanupJobIfTTL(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
 	currentTime := time.Now()
 	metaObject, _ := job.(metav1.Object)
@@ -192,9 +192,16 @@ func (jc *JobController) ReconcileJobs(
 	}
 
 	if jc.Config.EnableGangScheduling {
-		minAvailableReplicas := getTotalReplicas(replicas)
-		priorityClassName := getPriorityClassName(runPolicy)
-		//_, err := pc.SyncPodGroup(job, minAvailableReplicas)
+		minAvailableReplicas,getTotalReplicasErr := getTotalReplicas(replicas)
+		if getTotalReplicasErr!=nil{
+			log.Warnf("Sync PodGroup %v: %v", jobName, getTotalReplicasErr)
+		}
+
+		priorityClassName,getPriorityClassNameErr := getPriorityClassName(runPolicy)
+		if getPriorityClassNameErr!=nil{
+			log.Warnf("Sync PodGroup %v: %v", jobName, getPriorityClassNameErr)
+		}
+
 		_, err := jc.SyncPodGroup(metaObject, minAvailableReplicas, priorityClassName)
 		if err != nil {
 			log.Warnf("Sync PodGroup %v: %v", jobName, err)
@@ -309,14 +316,36 @@ func (jc *JobController) cleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 	jc.WorkQueue.AddRateLimited(key)
 	return nil
 }
-func getPriorityClassName(runPolicy *apiv1.RunPolicy) string {
+
+//get gPriorityClassName from RunPolicy.SchedulingPolicy
+func getPriorityClassName(runPolicy *apiv1.RunPolicy) (string,error) {
+	pcn:=runPolicy.SchedulingPolicy.PriorityClassName
+	if pcn == nil {
+		err:=errors.New("Couldn't get RunPolicy.PriorityClassName")
+		log.Warnf("getPriorityClassName error %v", err)
+		return "",err
+	}
+
 	priorityClassName := *runPolicy.SchedulingPolicy.PriorityClassName
-	return priorityClassName
+	return priorityClassName,nil
 }
-func getTotalReplicas(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) int32 {
+//get TotalReplicas from JobStatus.ReplicaStatuses
+func getTotalReplicas(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) (int32,error) {
+	rep:=replicas
+	if rep == nil {
+		err:=errors.New("Couldn't get ReplicaSpec")
+		log.Warnf("getTotalReplicas error %v", err)
+		return 0,err
+	}
+
 	jobReplicas := int32(0)
-	for _, r := range replicas {
+	for rt, r := range replicas {
+		if r==nil{
+			err:=errors.New("Couldn't get JobStatus.ReplicaStatuses",)
+			log.Warnf("get ReplicaStatus error %v from %v", err, rt)
+			continue
+		}
 		jobReplicas += *r.Replicas
 	}
-	return jobReplicas
+	return jobReplicas,nil
 }
