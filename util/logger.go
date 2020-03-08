@@ -58,6 +58,22 @@ func LoggerForPod(pod *v1.Pod, kind string) *log.Entry {
 	})
 }
 
+func LoggerForService(svc *v1.Service, kind string) *log.Entry {
+	job := ""
+	if controllerRef := metav1.GetControllerOf(svc); controllerRef != nil {
+		if controllerRef.Kind == kind {
+			job = svc.Namespace + "." + controllerRef.Name
+		}
+	}
+	return log.WithFields(log.Fields{
+		// We use job to match the key used in controller.go
+		// In controller.go we log the key used with the workqueue.
+		"job": job,
+		"service": svc.Namespace + "." + svc.Name,
+		"uid": svc.ObjectMeta.UID,
+	})
+}
+
 func LoggerForKey(key string) *log.Entry {
 	return log.WithFields(log.Fields{
 		// The key used by the workQueue should be namespace + "/" + name.

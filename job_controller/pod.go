@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/glog"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -427,12 +426,13 @@ func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodT
 		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
 		return err
 	} else {
+		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
 		accessor, err := meta.Accessor(object)
 		if err != nil {
-			glog.Errorf("parentObject does not have ObjectMeta, %v", err)
+			logger.Errorf("parentObject does not have ObjectMeta, %v", err)
 			return nil
 		}
-		glog.V(4).Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
+		logger.Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
 		jc.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
 	}
 	return nil
