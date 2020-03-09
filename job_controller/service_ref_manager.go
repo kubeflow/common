@@ -16,8 +16,8 @@ package job_controller
 
 import (
 	"fmt"
+	commonutil "github.com/kubeflow/common/util"
 
-	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,7 +133,8 @@ func (m *ServiceControllerRefManager) AdoptService(service *v1.Service) error {
 // ReleaseService sends a patch to free the service from the control of the controller.
 // It returns the error if the patching fails. 404 and 422 errors are ignored.
 func (m *ServiceControllerRefManager) ReleaseService(service *v1.Service) error {
-	glog.V(2).Infof("patching service %s_%s to remove its controllerRef to %s/%s:%s",
+	logger := commonutil.LoggerForService(service, m.controllerKind.Kind)
+	logger.Infof("patching service %s_%s to remove its controllerRef to %s/%s:%s",
 		service.Namespace, service.Name, m.controllerKind.GroupVersion(), m.controllerKind.Kind, m.Controller.GetName())
 	deleteOwnerRefPatch := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"$patch":"delete","uid":"%s"}],"uid":"%s"}}`, m.Controller.GetUID(), service.UID)
 	err := m.serviceControl.PatchService(service.Namespace, service.Name, []byte(deleteOwnerRefPatch))

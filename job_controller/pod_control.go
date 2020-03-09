@@ -16,8 +16,7 @@ package job_controller
 
 import (
 	"fmt"
-
-	"github.com/golang/glog"
+	commonutil "github.com/kubeflow/common/util"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,16 +128,17 @@ func (r RealPodControl) createPods(nodeName, namespace string, template *v1.PodT
 	if labels.Set(pod.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create pods, no labels")
 	}
+	logger := commonutil.LoggerForPod(pod, object.GetObjectKind().GroupVersionKind().Kind)
 	if newPod, err := r.KubeClient.CoreV1().Pods(namespace).Create(pod); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
 		return err
 	} else {
 		accessor, err := meta.Accessor(object)
 		if err != nil {
-			glog.Errorf("parentObject does not have ObjectMeta, %v", err)
+			logger.Errorf("parentObject does not have ObjectMeta, %v", err)
 			return nil
 		}
-		glog.V(4).Infof("Controller %v created pod %v", accessor.GetName(), newPod.Name)
+		logger.Infof("Controller %v created pod %v", accessor.GetName(), newPod.Name)
 		r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreatePodReason, "Created pod: %v", newPod.Name)
 	}
 	return nil
@@ -149,7 +149,8 @@ func (r RealPodControl) DeletePod(namespace string, podID string, object runtime
 	if err != nil {
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
 	}
-	glog.V(2).Infof("Controller %v deleting pod %v/%v", accessor.GetName(), namespace, podID)
+	logger := commonutil.LoggerForJob(accessor)
+	logger.Infof("Controller %v deleting pod %v/%v", accessor.GetName(), namespace, podID)
 	if err := r.KubeClient.CoreV1().Pods(namespace).Delete(podID, nil); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeletePodReason, "Error deleting: %v", err)
 		return fmt.Errorf("unable to delete pods: %v", err)
