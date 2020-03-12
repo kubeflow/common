@@ -22,6 +22,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	_ "k8s.io/code-generator/pkg/util"
+	_ "k8s.io/kube-openapi/pkg/common"
 )
 
 const (
