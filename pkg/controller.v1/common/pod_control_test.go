@@ -37,7 +37,7 @@ func TestCreatePods(t *testing.T) {
 	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "empty_pod"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
-		ResponseBody: string(body),
+		ResponseBody: body,
 	}
 	testServer := httptest.NewServer(&fakeHandler)
 	defer testServer.Close()

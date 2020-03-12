@@ -37,7 +37,7 @@ func TestCreateService(t *testing.T) {
 	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
-		ResponseBody: string(body),
+		ResponseBody: body,
 	}
 	testServer := httptest.NewServer(&fakeHandler)
 	defer testServer.Close()
@@ -83,7 +83,7 @@ func TestCreateServicesWithControllerRef(t *testing.T) {
 	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
-		ResponseBody: string(body),
+		ResponseBody: body,
 	}
 	testServer := httptest.NewServer(&fakeHandler)
 	defer testServer.Close()
