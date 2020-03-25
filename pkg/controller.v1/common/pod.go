@@ -292,9 +292,9 @@ func (jc *JobController) ReconcilePods(
 	// GetPodSlices will return enough information here to make decision to add/remove/update resources.
 	//
 	// For example, let's assume we have pods with replica-index 0, 1, 2
-	// If replica is 4, return a slide with size 4. [[0],[1],[2],[]], a pod with replica-index 3 will be created.
+	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a pod with replica-index 3 will be created.
 	//
-	// If replica is 1, return a slide with size 3. [[0],[1],[2]], pod with replica-index 1 and 2 are out of range and will be deleted.
+	// If replica is 1, return a slice with size 3. [[0],[1],[2]], pod with replica-index 1 and 2 are out of range and will be deleted.
 	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {

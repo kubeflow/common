@@ -169,9 +169,9 @@ func (jc *JobController) ReconcileServices(
 	// GetServiceSlices will return enough information here to make decision to add/remove/update resources.
 	//
 	// For example, let's assume we have services with replica-index 0, 1, 2
-	// If replica is 4, return a slide with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
+	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
 	//
-	// If replica is 1, return a slide with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
+	// If replica is 1, return a slice with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
 	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
 
 	for index, serviceSlice := range serviceSlices {
@@ -206,7 +206,7 @@ func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (int32, error) 
 		if container.Name == jc.Controller.GetDefaultContainerName() {
 			ports := container.Ports
 			for _, port := range ports {
-				if port.Name == jc.Controller.GetDefaultContainerPortName(){
+				if port.Name == jc.Controller.GetDefaultContainerPortName() {
 					return port.ContainerPort, nil
 				}
 			}

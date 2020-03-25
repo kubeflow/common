@@ -23,7 +23,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +resource:path=testjob
 
-// A generic job used for unit tests. 
+// A generic job used for unit tests.
 type TestJob struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -42,7 +42,7 @@ type TestJob struct {
 
 // TestJobSpec is a desired state description of the TestJob.
 type TestJobSpec struct {
-	RunPolicy *commonv1.RunPolicy                              `json:"runPolicy,omitempty"`
+	RunPolicy        *commonv1.RunPolicy                       `json:"runPolicy,omitempty"`
 	TestReplicaSpecs map[TestReplicaType]*commonv1.ReplicaSpec `json:"testReplicaSpecs"`
 }
 

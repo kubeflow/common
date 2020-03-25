@@ -68,9 +68,9 @@ func LoggerForService(svc *v1.Service, kind string) *log.Entry {
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// In controller.go we log the key used with the workqueue.
-		"job": job,
+		"job":     job,
 		"service": svc.Namespace + "." + svc.Name,
-		"uid": svc.ObjectMeta.UID,
+		"uid":     svc.ObjectMeta.UID,
 	})
 }
 
