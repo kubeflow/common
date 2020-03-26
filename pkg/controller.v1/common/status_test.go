@@ -22,8 +22,7 @@ func TestUpdateJobReplicaStatuses(t *testing.T) {
 
 func setStatusForTest(jobStatus *apiv1.JobStatus, rtype apiv1.ReplicaType, failed, succeeded, active int32) {
 	pod := corev1.Pod{
-		Status: corev1.PodStatus{
-		},
+		Status: corev1.PodStatus{},
 	}
 	var i int32
 	for i = 0; i < failed; i++ {

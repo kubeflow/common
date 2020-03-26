@@ -192,7 +192,6 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	jc.WorkQueue.Add(jobKey)
 }
 
-
 // FilterPodsForReplicaType returns pods belong to a replicaType.
 func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
 	var result []*v1.Pod
@@ -217,8 +216,9 @@ func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType st
 }
 
 // getPodSlices returns a slice, which element is the slice of pod.
+// It gives enough information to caller to make decision to up/down scale resources.
 func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
-	podSlices := make([][]*v1.Pod, replicas)
+	podSlices := make([][]*v1.Pod, calculatePodSliceSize(pods, replicas))
 	for _, pod := range pods {
 		if _, ok := pod.Labels[apiv1.ReplicaIndexLabel]; !ok {
 			logger.Warning("The pod do not have the index label.")
@@ -230,12 +230,30 @@ func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.
 			continue
 		}
 		if index < 0 || index >= replicas {
-			logger.Warningf("The label index is not expected: %d", index)
-		} else {
-			podSlices[index] = append(podSlices[index], pod)
+			logger.Warningf("The label index is not expected: %d, pod: %s/%s", index, pod.Namespace, pod.Name)
 		}
+
+		podSlices[index] = append(podSlices[index], pod)
 	}
 	return podSlices
+}
+
+// calculatePodSliceSize compare max pod index with desired replicas and return larger size
+func calculatePodSliceSize(pods []*v1.Pod, replicas int) int {
+	size := 0
+	for _, pod := range pods {
+		if _, ok := pod.Labels[apiv1.ReplicaIndexLabel]; !ok {
+			continue
+		}
+		index, err := strconv.Atoi(pod.Labels[apiv1.ReplicaIndexLabel])
+		if err != nil {
+			continue
+		}
+		size = MaxInt(size, index)
+	}
+
+	// size comes from index, need to +1 to indicate real size
+	return MaxInt(size+1, replicas)
 }
 
 // ReconcilePods checks and updates pods for each given ReplicaSpec.
@@ -271,6 +289,12 @@ func (jc *JobController) ReconcilePods(
 
 	initializeReplicaStatuses(jobStatus, rtype)
 
+	// GetPodSlices will return enough information here to make decision to add/remove/update resources.
+	//
+	// For example, let's assume we have pods with replica-index 0, 1, 2
+	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a pod with replica-index 3 will be created.
+	//
+	// If replica is 1, return a slice with size 3. [[0],[1],[2]], pod with replica-index 1 and 2 are out of range and will be deleted.
 	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {
@@ -287,6 +311,15 @@ func (jc *JobController) ReconcilePods(
 		} else {
 			// Check the status of the current pod.
 			pod := podSlice[0]
+
+			// check if the index is in the valid range, if not, we should kill the pod
+			if index < 0 || index >= numReplicas {
+				err = jc.Controller.DeletePod(job, pod)
+				if err != nil {
+					return err
+				}
+			}
+
 			// Get the exit code of the container.
 			var exitCode int32 = 0xbeef // magic number
 			for _, status := range pod.Status.ContainerStatuses {

@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -28,5 +29,35 @@ func TestGenGeneralName(t *testing.T) {
 	name := GenGeneralName(testKey, testRType, testIndex)
 	if name != expectedName {
 		t.Errorf("Expected name %s, got %s", expectedName, name)
+	}
+}
+
+func TestMaxInt(t *testing.T) {
+	type testCase struct {
+		x           int
+		y           int
+		expectedMax int
+	}
+	var testCases = []testCase{
+		{
+			x:           10,
+			y:           20,
+			expectedMax: 20,
+		},
+		{
+			x:           20,
+			y:           10,
+			expectedMax: 20,
+		},
+		{
+			x:           5,
+			y:           5,
+			expectedMax: 5,
+		},
+	}
+
+	for _, tc := range testCases {
+		result := MaxInt(tc.x, tc.y)
+		assert.Equal(t, tc.expectedMax, result)
 	}
 }

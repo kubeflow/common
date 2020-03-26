@@ -2,6 +2,7 @@ package common
 
 import (
 	v12 "github.com/kubeflow/common/test_job/test_util/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -85,4 +86,62 @@ func TestIsNonGangSchedulerSet(t *testing.T) {
 		},
 	}
 	assert.True(t, isNonGangSchedulerSet(replicaSpecs))
+}
+
+func TestCalculatePodSliceSize(t *testing.T) {
+	type testCase struct {
+		pods         []*v1.Pod
+		replicas     int
+		expectedSize int
+	}
+
+	pods := []*v1.Pod{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{apiv1.ReplicaIndexLabel: "0"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{apiv1.ReplicaIndexLabel: "1"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{apiv1.ReplicaIndexLabel: "2"},
+			},
+		},
+	}
+
+	var testCases = []testCase{
+		{
+			pods:         pods,
+			replicas:     3,
+			expectedSize: 3,
+		},
+		{
+			pods:         pods,
+			replicas:     4,
+			expectedSize: 4,
+		},
+		{
+			pods:         pods,
+			replicas:     2,
+			expectedSize: 3,
+		},
+		{
+			pods: append(pods, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{apiv1.ReplicaIndexLabel: "4"},
+				},
+			}),
+			replicas:     3,
+			expectedSize: 5,
+		},
+	}
+
+	for _, tc := range testCases {
+		result := calculatePodSliceSize(tc.pods, tc.replicas)
+		assert.Equal(t, tc.expectedSize, result)
+	}
 }

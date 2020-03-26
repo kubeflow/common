@@ -71,4 +71,3 @@ type ControllerInterface interface {
 	// MasterRole pod will have "job-role=master" set in its label
 	IsMasterRole(replicas map[ReplicaType]*ReplicaSpec, rtype ReplicaType, index int) bool
 }
-

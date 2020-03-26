@@ -110,7 +110,7 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 // Assume the return object is serviceSlices, then serviceSlices[i] is an
 // array of pointers to services corresponding to Services for replica i.
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
-	serviceSlices := make([][]*v1.Service, replicas)
+	serviceSlices := make([][]*v1.Service, calculateServiceSliceSize(services, replicas))
 	for _, service := range services {
 		if _, ok := service.Labels[apiv1.ReplicaIndexLabel]; !ok {
 			logger.Warning("The service do not have the index label.")
@@ -122,12 +122,30 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 			continue
 		}
 		if index < 0 || index >= replicas {
-			logger.Warningf("The label index is not expected: %d", index)
-		} else {
-			serviceSlices[index] = append(serviceSlices[index], service)
+			logger.Warningf("The label index is not expected: %d, service: %s/%s", index, service.Namespace, service.Name)
 		}
+
+		serviceSlices[index] = append(serviceSlices[index], service)
 	}
 	return serviceSlices
+}
+
+// calculateServiceSliceSize compare max pod index with desired replicas and return larger size
+func calculateServiceSliceSize(services []*v1.Service, replicas int) int {
+	size := 0
+	for _, svc := range services {
+		if _, ok := svc.Labels[apiv1.ReplicaIndexLabel]; !ok {
+			continue
+		}
+		index, err := strconv.Atoi(svc.Labels[apiv1.ReplicaIndexLabel])
+		if err != nil {
+			continue
+		}
+		size = MaxInt(size, index)
+	}
+
+	// size comes from index, need to +1 to indicate real size
+	return MaxInt(size+1, replicas)
 }
 
 // reconcileServices checks and updates services for each given ReplicaSpec.
@@ -148,6 +166,12 @@ func (jc *JobController) ReconcileServices(
 		return err
 	}
 
+	// GetServiceSlices will return enough information here to make decision to add/remove/update resources.
+	//
+	// For example, let's assume we have services with replica-index 0, 1, 2
+	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
+	//
+	// If replica is 1, return a slice with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
 	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
 
 	for index, serviceSlice := range serviceSlices {
@@ -158,6 +182,17 @@ func (jc *JobController) ReconcileServices(
 			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
+			}
+		} else {
+			// Check the status of the current svc.
+			svc := serviceSlice[0]
+
+			// check if the index is in the valid range, if not, we should kill the svc
+			if index < 0 || index >= replicas {
+				err = jc.Controller.DeleteService(job, svc.Name, svc.Namespace)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -171,7 +206,7 @@ func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (int32, error) 
 		if container.Name == jc.Controller.GetDefaultContainerName() {
 			ports := container.Ports
 			for _, port := range ports {
-				if port.Name == jc.Controller.GetDefaultContainerPortName(){
+				if port.Name == jc.Controller.GetDefaultContainerPortName() {
 					return port.ContainerPort, nil
 				}
 			}

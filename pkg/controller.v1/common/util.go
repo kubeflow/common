@@ -50,3 +50,10 @@ func GenExpectationPodsKey(jobKey, replicaType string) string {
 func GenExpectationServicesKey(jobKey, replicaType string) string {
 	return jobKey + "/" + strings.ToLower(replicaType) + "/services"
 }
+
+func MaxInt(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}
