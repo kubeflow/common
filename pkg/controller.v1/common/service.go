@@ -199,20 +199,25 @@ func (jc *JobController) ReconcileServices(
 	return nil
 }
 
-// GetPortFromJob gets the port of job container.
-func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (int32, error) {
+// GetPortFromJob gets the port of job container. Port could be nil depending on different distributed communication strategy
+func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (*int32, error) {
+	// Consider the case controller doesn't use fixed port, headless service without port will enable random pod to pod communication
+	if jc.Controller.GetDefaultContainerPortName() == "" {
+		return nil, nil
+	}
+
 	containers := spec.Template.Spec.Containers
 	for _, container := range containers {
 		if container.Name == jc.Controller.GetDefaultContainerName() {
 			ports := container.Ports
 			for _, port := range ports {
 				if port.Name == jc.Controller.GetDefaultContainerPortName() {
-					return port.ContainerPort, nil
+					return &port.ContainerPort, nil
 				}
 			}
 		}
 	}
-	return -1, fmt.Errorf("failed to find the port")
+	return nil, fmt.Errorf("failed to find the port")
 }
 
 // createNewService creates a new service for the given index and type.
@@ -246,13 +251,14 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		Spec: v1.ServiceSpec{
 			ClusterIP: "None",
 			Selector:  labels,
-			Ports: []v1.ServicePort{
-				{
-					Name: jc.Controller.GetDefaultContainerPortName(),
-					Port: port,
-				},
-			},
+			Ports:     []v1.ServicePort{},
 		},
+	}
+
+	// Add service port to headless service only if port is set from controller implementation
+	if port != nil {
+		svcPort := v1.ServicePort{Name: jc.Controller.GetDefaultContainerPortName(), Port: *port}
+		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
 	service.Name = GenGeneralName(job.GetName(), rt, index)
