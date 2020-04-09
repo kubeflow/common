@@ -11,19 +11,19 @@ import (
 	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/policy/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/cache"
+	"volcano.sh/volcano/pkg/apis/scheduling/v1beta1"
 
-	kubebatchclient "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/kubernetes/pkg/controller"
+	volcanoclient "volcano.sh/volcano/pkg/client/clientset/versioned"
 )
 
 var (
@@ -43,7 +43,7 @@ type JobControllerConfiguration struct {
 	// e.g. 15s, 30s, 60s, 120s...
 	ReconcilerSyncLoopPeriod metav1.Duration
 
-	// Enable gang scheduling by kube-batch
+	// Enable gang scheduling by volcano
 	EnableGangScheduling bool
 }
 
@@ -66,8 +66,8 @@ type JobController struct {
 	// KubeClientSet is a standard kubernetes clientset.
 	KubeClientSet kubeclientset.Interface
 
-	// KubeBatchClientSet is a standard kube-batch clientset.
-	KubeBatchClientSet kubebatchclient.Interface
+	// VolcanoClientSet is a standard volcano clientset.
+	VolcanoClientSet volcanoclient.Interface
 
 	// PodLister can list/get pods from the shared informer's store.
 	PodLister corelisters.PodLister
@@ -132,13 +132,13 @@ func NewJobController(
 	}
 
 	jc := JobController{
-		Controller:         controllerImpl,
-		Config:             jobControllerConfig,
-		KubeClientSet:      kubeClientSet,
-		KubeBatchClientSet: kubeBatchClientSet,
-		Expectations:       controller.NewControllerExpectations(),
-		WorkQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
-		Recorder:           recorder,
+		Controller:       controllerImpl,
+		Config:           jobControllerConfig,
+		KubeClientSet:    kubeClientSet,
+		VolcanoClientSet: kubeBatchClientSet,
+		Expectations:     controller.NewControllerExpectations(),
+		WorkQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
+		Recorder:         recorder,
 	}
 	return jc
 
@@ -168,32 +168,32 @@ func (jc *JobController) GenLabels(jobName string) map[string]string {
 	}
 }
 
-func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas int32) (*v1alpha1.PodGroup, error) {
+func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas int32) (*v1beta1.PodGroup, error) {
 
-	kubeBatchClientInterface := jc.KubeBatchClientSet
+	kubeBatchClientInterface := jc.VolcanoClientSet
 	// Check whether podGroup exists or not
 	podGroup, err := kubeBatchClientInterface.SchedulingV1alpha1().PodGroups(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
 	if err == nil {
 		return podGroup, nil
 	}
 
-	// create podGroup for gang scheduling by kube-batch
+	// create podGroup for gang scheduling by volcano
 	minAvailable := intstr.FromInt(int(minAvailableReplicas))
-	createPodGroup := &v1alpha1.PodGroup{
+	createPodGroup := &v1beta1.PodGroup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: job.GetName(),
 			OwnerReferences: []metav1.OwnerReference{
 				*jc.GenOwnerReference(job),
 			},
 		},
-		Spec: v1alpha1.PodGroupSpec{
+		Spec: v1beta1.PodGroupSpec{
 			MinMember: minAvailable.IntVal,
 		},
 	}
 	return kubeBatchClientInterface.SchedulingV1alpha1().PodGroups(job.GetNamespace()).Create(createPodGroup)
 }
 
-// SyncPdb will create a PDB for gang scheduling by kube-batch.
+// SyncPdb will create a PDB for gang scheduling by volcano.
 func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*v1beta1.PodDisruptionBudget, error) {
 	labelJobName := apiv1.JobNameLabel
 
@@ -206,7 +206,7 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 		return pdb, err
 	}
 
-	// Create pdb for gang scheduling by kube-batch
+	// Create pdb for gang scheduling by volcano
 	minAvailable := intstr.FromInt(int(minAvailableReplicas))
 	createPdb := &v1beta1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -228,7 +228,7 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 }
 
 func (jc *JobController) DeletePodGroup(job metav1.Object) error {
-	kubeBatchClientInterface := jc.KubeBatchClientSet
+	kubeBatchClientInterface := jc.VolcanoClientSet
 
 	//check whether podGroup exists or not
 	_, err := kubeBatchClientInterface.SchedulingV1alpha1().PodGroups(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
