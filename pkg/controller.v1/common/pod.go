@@ -38,7 +38,7 @@ import (
 
 const (
 	// gang scheduler name.
-	gangSchedulerName = "kube-batch"
+	gangSchedulerName = "volcano"
 	// podTemplateRestartPolicyReason is the warning reason when the restart
 	// policy is set in pod template.
 	podTemplateRestartPolicyReason = "SettedPodTemplateRestartPolicy"
@@ -407,7 +407,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 
 	// if gang-scheduling is enabled:
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
-	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "kube-batch".
+	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "volcano".
 	if jc.Config.EnableGangScheduling {
 		if isNonGangSchedulerSet(replicas) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
