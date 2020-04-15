@@ -18,7 +18,7 @@ require (
 	k8s.io/client-go v0.16.9-beta.0
 	k8s.io/code-generator v0.15.10
 	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
-	k8s.io/kubernetes v1.18.0
+	k8s.io/kubernetes v1.16.2
 	volcano.sh/volcano v0.4.0
 )
 
@@ -39,7 +39,7 @@ replace (
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.15.10
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.15.10
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.15.10
-	k8s.io/kubectl => k8s.io/kubectl v0.15.11-beta.0
+	k8s.io/kubectl => k8s.io/kubectl v0.15.10
 	k8s.io/kubelet => k8s.io/kubelet v0.15.10
 	k8s.io/kubernetes => k8s.io/kubernetes v1.15.10
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.15.10
