@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package control
 
 import (
 	"fmt"
@@ -49,25 +49,6 @@ type ServiceControlInterface interface {
 	DeleteService(namespace, serviceID string, object runtime.Object) error
 }
 
-func validateControllerRef(controllerRef *metav1.OwnerReference) error {
-	if controllerRef == nil {
-		return fmt.Errorf("controllerRef is nil")
-	}
-	if len(controllerRef.APIVersion) == 0 {
-		return fmt.Errorf("controllerRef has empty APIVersion")
-	}
-	if len(controllerRef.Kind) == 0 {
-		return fmt.Errorf("controllerRef has empty Kind")
-	}
-	if controllerRef.Controller == nil || !*controllerRef.Controller {
-		return fmt.Errorf("controllerRef.Controller is not set to true")
-	}
-	if controllerRef.BlockOwnerDeletion == nil || !*controllerRef.BlockOwnerDeletion {
-		return fmt.Errorf("controllerRef.BlockOwnerDeletion is not set")
-	}
-	return nil
-}
-
 // RealServiceControl is the default implementation of ServiceControlInterface.
 type RealServiceControl struct {
 	KubeClient clientset.Interface
@@ -84,7 +65,7 @@ func (r RealServiceControl) CreateServices(namespace string, service *v1.Service
 }
 
 func (r RealServiceControl) CreateServicesWithControllerRef(namespace string, service *v1.Service, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := validateControllerRef(controllerRef); err != nil {
+	if err := ValidateControllerRef(controllerRef); err != nil {
 		return err
 	}
 	return r.createServices(namespace, service, controllerObject, controllerRef)
@@ -94,7 +75,7 @@ func (r RealServiceControl) createServices(namespace string, service *v1.Service
 	if labels.Set(service.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create Services, no labels")
 	}
-	serviceWithOwner, err := getServiceFromTemplate(service, object, controllerRef)
+	serviceWithOwner, err := GetServiceFromTemplate(service, object, controllerRef)
 	if err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
@@ -204,12 +185,4 @@ func (f *FakeServiceControl) Clear() {
 	f.Patches = [][]byte{}
 	f.CreateLimit = 0
 	f.CreateCallCount = 0
-}
-
-func getServiceFromTemplate(template *v1.Service, parentObject runtime.Object, controllerRef *metav1.OwnerReference) (*v1.Service, error) {
-	service := template.DeepCopy()
-	if controllerRef != nil {
-		service.OwnerReferences = append(service.OwnerReferences, *controllerRef)
-	}
-	return service, nil
 }
