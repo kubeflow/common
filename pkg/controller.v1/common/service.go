@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/kubernetes/pkg/controller"
 )
 
 // When a service is created, enqueue the controller that manages it and update its expectations.
@@ -49,7 +48,7 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		jobKey, err := controller.KeyFunc(job)
+		jobKey, err := KeyFunc(job)
 		if err != nil {
 			return
 		}
