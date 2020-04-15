@@ -16,6 +16,7 @@ package control
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -111,6 +112,17 @@ func (r RealServiceControl) DeleteService(namespace, serviceID string, object ru
 	accessor, err := meta.Accessor(object)
 	if err != nil {
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
+	}
+	service, err := r.KubeClient.CoreV1().Services(namespace).Get(serviceID, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if service.DeletionTimestamp != nil {
+		log.Infof("service %s/%s is terminating, skip deleting", service.Namespace, service.Name)
+		return nil
 	}
 	log.Infof("Controller %v deleting service %v/%v", accessor.GetName(), namespace, serviceID)
 	if err := r.KubeClient.CoreV1().Services(namespace).Delete(serviceID, nil); err != nil {

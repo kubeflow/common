@@ -18,6 +18,7 @@ import (
 	"fmt"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -166,6 +167,17 @@ func (r RealPodControl) DeletePod(namespace string, podID string, object runtime
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
 	}
 	logger := commonutil.LoggerForJob(accessor)
+	pod, err := r.KubeClient.CoreV1().Pods(namespace).Get(podID, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if pod.DeletionTimestamp != nil {
+		logger.Infof("pod %s/%s is terminating, skip deleting", pod.Namespace, pod.Name)
+		return nil
+	}
 	logger.Infof("Controller %v deleting pod %v/%v", accessor.GetName(), namespace, podID)
 	if err := r.KubeClient.CoreV1().Pods(namespace).Delete(podID, nil); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeletePodReason, "Error deleting: %v", err)
