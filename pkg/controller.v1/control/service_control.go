@@ -30,9 +30,17 @@ import (
 )
 
 const (
+	// FailedCreateServiceReason is added in an event and in a job controller condition
+	// when a service for a job is failed to be created.
 	FailedCreateServiceReason     = "FailedCreateService"
+	// SuccessfulCreateServiceReason is added in an event when a service for a job
+	// is successfully created.
 	SuccessfulCreateServiceReason = "SuccessfulCreateService"
+	// FailedDeleteServiceReason is added in an event and in a job condition
+	// when a service for a job is failed to be deleted.
 	FailedDeleteServiceReason     = "FailedDeleteService"
+	// SuccessfulDeleteServiceReason is added in an event when a service for a job
+	// is successfully deleted.
 	SuccessfulDeleteServiceReason = "SuccessfulDeleteService"
 )
 
