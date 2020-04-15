@@ -15,6 +15,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"strconv"
 	"strings"
 
@@ -283,7 +284,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 }
 
 func (jc *JobController) CreateServicesWithControllerRef(namespace string, service *v1.Service, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := validateControllerRef(controllerRef); err != nil {
+	if err := control.ValidateControllerRef(controllerRef); err != nil {
 		return err
 	}
 	return jc.createServices(namespace, service, controllerObject, controllerRef)
@@ -293,16 +294,16 @@ func (jc *JobController) createServices(namespace string, service *v1.Service, o
 	if labels.Set(service.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create Services, no labels")
 	}
-	serviceWithOwner, err := getServiceFromTemplate(service, object, controllerRef)
+	serviceWithOwner, err := control.GetServiceFromTemplate(service, object, controllerRef)
 	serviceWithOwner.Namespace = namespace
 	if err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
 	}
 
 	err = jc.Controller.CreateService(object, serviceWithOwner)
 	if err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
 	}
 
@@ -312,7 +313,7 @@ func (jc *JobController) createServices(namespace string, service *v1.Service, o
 		return nil
 	}
 	log.Infof("Controller %v created service %v", accessor.GetName(), serviceWithOwner.Name)
-	jc.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreateServiceReason, "Created service: %v", serviceWithOwner.Name)
+	jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreateServiceReason, "Created service: %v", serviceWithOwner.Name)
 
 	return nil
 }

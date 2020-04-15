@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"reflect"
 	"strconv"
 	"strings"
@@ -437,14 +438,14 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 
 func (jc *JobController) createPodWithControllerRef(namespace string, template *v1.PodTemplateSpec,
 	controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := validateControllerRef(controllerRef); err != nil {
+	if err := control.ValidateControllerRef(controllerRef); err != nil {
 		return err
 	}
 	return jc.createPod("", namespace, template, controllerObject, controllerRef)
 }
 
 func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodTemplateSpec, object runtime.Object, controllerRef *metav1.OwnerReference) error {
-	pod, err := GetPodFromTemplate(template, object, controllerRef)
+	pod, err := control.GetPodFromTemplate(template, object, controllerRef)
 	pod.Namespace = namespace
 	if err != nil {
 		return err
@@ -456,7 +457,7 @@ func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodT
 		return fmt.Errorf("unable to create pods, no labels")
 	}
 	if err := jc.Controller.CreatePod(object, pod); err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreatePodReason, "Error creating: %v", err)
 		return err
 	} else {
 		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
@@ -466,7 +467,7 @@ func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodT
 			return nil
 		}
 		logger.Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
-		jc.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
+		jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
 	}
 	return nil
 }

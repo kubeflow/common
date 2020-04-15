@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package control
 
 import (
 	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package control
 
 import (
 	"fmt"
@@ -79,14 +79,14 @@ func (r RealPodControl) CreatePods(namespace string, template *v1.PodTemplateSpe
 }
 
 func (r RealPodControl) CreatePodsWithControllerRef(namespace string, template *v1.PodTemplateSpec, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := validateControllerRef(controllerRef); err != nil {
+	if err := ValidateControllerRef(controllerRef); err != nil {
 		return err
 	}
 	return r.createPods("", namespace, template, controllerObject, controllerRef)
 }
 
 func (r RealPodControl) CreatePodsOnNode(nodeName, namespace string, template *v1.PodTemplateSpec, object runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := validateControllerRef(controllerRef); err != nil {
+	if err := ValidateControllerRef(controllerRef); err != nil {
 		return err
 	}
 	return r.createPods(nodeName, namespace, template, object, controllerRef)
