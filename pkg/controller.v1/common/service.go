@@ -28,8 +28,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/kubernetes/pkg/controller"
+)
+
+var (
+	succeededServiceCreationCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "succeeded_service_creation_total",
+		Help: "The total number of succeeded service creation",
+	})
+	failedServiceCreationCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "failed_service_creation_total",
+		Help: "The total number of failed service creation",
+	})
 )
 
 // When a service is created, enqueue the controller that manages it and update its expectations.
@@ -298,12 +311,14 @@ func (jc *JobController) createServices(namespace string, service *v1.Service, o
 	serviceWithOwner.Namespace = namespace
 	if err != nil {
 		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
+		failedServiceCreationCount.Inc()
 		return fmt.Errorf("unable to create services: %v", err)
 	}
 
 	err = jc.Controller.CreateService(object, serviceWithOwner)
 	if err != nil {
 		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
+		failedServiceCreationCount.Inc()
 		return fmt.Errorf("unable to create services: %v", err)
 	}
 
@@ -314,6 +329,6 @@ func (jc *JobController) createServices(namespace string, service *v1.Service, o
 	}
 	log.Infof("Controller %v created service %v", accessor.GetName(), serviceWithOwner.Name)
 	jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreateServiceReason, "Created service: %v", serviceWithOwner.Name)
-
+	succeededServiceCreationCount.Inc()
 	return nil
 }
