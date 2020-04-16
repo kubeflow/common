@@ -16,11 +16,12 @@ package common
 
 import (
 	"fmt"
-	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/kubeflow/common/pkg/controller.v1/control"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -85,7 +86,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 		}
 
 		rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-		expectationPodsKey := GenExpectationPodsKey(jobKey, rtype)
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationPodsKey)
 		// TODO: we may need add backoff here
@@ -186,7 +187,7 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	}
 
 	rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-	expectationPodsKey := GenExpectationPodsKey(jobKey, rtype)
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
 	// TODO: we may need add backoff here
@@ -364,7 +365,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
 		return err
 	}
-	expectationPodsKey := GenExpectationPodsKey(jobKey, rt)
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
 	err = jc.Expectations.ExpectCreations(expectationPodsKey, 1)
 	if err != nil {
 		return err

@@ -21,8 +21,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/kubernetes/pkg/controller"
 	"volcano.sh/volcano/pkg/apis/scheduling/v1beta1"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	volcanoclient "volcano.sh/volcano/pkg/client/clientset/versioned"
 )
 
@@ -97,7 +97,7 @@ type JobController struct {
 	// - "tf-operator/tfjob-abc/ps/pods", expects 2 adds.
 	// - "tf-operator/tfjob-abc/worker/services", expects 4 adds.
 	// - "tf-operator/tfjob-abc/worker/pods", expects 4 adds.
-	Expectations controller.ControllerExpectationsInterface
+	Expectations expectation.ControllerExpectationsInterface
 
 	// WorkQueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -136,7 +136,7 @@ func NewJobController(
 		Config:           jobControllerConfig,
 		KubeClientSet:    kubeClientSet,
 		VolcanoClientSet: volcanoClientSet,
-		Expectations:     controller.NewControllerExpectations(),
+		Expectations:     expectation.NewControllerExpectations(),
 		WorkQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
 		Recorder:         recorder,
 	}
