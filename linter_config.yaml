@@ -32,7 +32,6 @@ linters:
   enable:
     - bodyclose
     - deadcode
-    - errcheck
     - misspell
     - lll
     - typecheck
