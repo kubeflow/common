@@ -20,6 +20,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,9 +31,17 @@ import (
 )
 
 const (
+	// FailedCreateServiceReason is added in an event and in a job controller condition
+	// when a service for a job is failed to be created.
 	FailedCreateServiceReason     = "FailedCreateService"
+	// SuccessfulCreateServiceReason is added in an event when a service for a job
+	// is successfully created.
 	SuccessfulCreateServiceReason = "SuccessfulCreateService"
+	// FailedDeleteServiceReason is added in an event and in a job condition
+	// when a service for a job is failed to be deleted.
 	FailedDeleteServiceReason     = "FailedDeleteService"
+	// SuccessfulDeleteServiceReason is added in an event when a service for a job
+	// is successfully deleted.
 	SuccessfulDeleteServiceReason = "SuccessfulDeleteService"
 )
 
@@ -103,6 +112,17 @@ func (r RealServiceControl) DeleteService(namespace, serviceID string, object ru
 	accessor, err := meta.Accessor(object)
 	if err != nil {
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
+	}
+	service, err := r.KubeClient.CoreV1().Services(namespace).Get(serviceID, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if service.DeletionTimestamp != nil {
+		log.Infof("service %s/%s is terminating, skip deleting", service.Namespace, service.Name)
+		return nil
 	}
 	log.Infof("Controller %v deleting service %v/%v", accessor.GetName(), namespace, serviceID)
 	if err := r.KubeClient.CoreV1().Services(namespace).Delete(serviceID, nil); err != nil {

@@ -26,6 +26,179 @@ import (
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
 )
 
+func TestClaimPods(t *testing.T) {
+	controllerUID := "123"
+
+	type test struct {
+		name     string
+		manager  *PodControllerRefManager
+		pods []*v1.Pod
+		claimed  []*v1.Pod
+	}
+	var tests = []test{
+		func() test {
+			testJob := testutilv1.NewTestJob(1)
+			testJobLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(testJob.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			testPod := testutilv1.NewBasePod("pod2", testJob, nil)
+			testPod.Labels[testutilv1.LabelGroupName] = "testing"
+
+			return test{
+				name: "Claim pods with correct label",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					testJob,
+					testJobLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t), testPod},
+				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t)},
+			}
+		}(),
+		func() test {
+			controller := testutilv1.NewTestJob(1)
+			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(controller.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			controller.UID = types.UID(controllerUID)
+			now := metav1.Now()
+			controller.DeletionTimestamp = &now
+			testPod1 := testutilv1.NewBasePod("pod1", controller, t)
+			testPod1.SetOwnerReferences([]metav1.OwnerReference{})
+			testPod2 := testutilv1.NewBasePod("pod2", controller, t)
+			testPod2.SetOwnerReferences([]metav1.OwnerReference{})
+			return test{
+				name: "Controller marked for deletion can not claim pods",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					controller,
+					controllerLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testPod1, testPod2},
+				claimed:  nil,
+			}
+		}(),
+		func() test {
+			controller := testutilv1.NewTestJob(1)
+			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(controller.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			controller.UID = types.UID(controllerUID)
+			now := metav1.Now()
+			controller.DeletionTimestamp = &now
+			testPod2 := testutilv1.NewBasePod("pod2", controller, t)
+			testPod2.SetOwnerReferences([]metav1.OwnerReference{})
+			return test{
+				name: "Controller marked for deletion can not claim new pods",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					controller,
+					controllerLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
+				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+			}
+		}(),
+		func() test {
+			controller := testutilv1.NewTestJob(1)
+			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(controller.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			controller2 := testutilv1.NewTestJob(1)
+			controller.UID = types.UID(controllerUID)
+			controller2.UID = types.UID("AAAAA")
+			return test{
+				name: "Controller can not claim pods owned by another controller",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					controller,
+					controllerLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testutilv1.NewBasePod("pod2", controller2, t)},
+				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+			}
+		}(),
+		func() test {
+			controller := testutilv1.NewTestJob(1)
+			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(controller.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			controller.UID = types.UID(controllerUID)
+			testPod2 := testutilv1.NewBasePod("pod2", controller, t)
+			testPod2.Labels[testutilv1.LabelGroupName] = "testing"
+			return test{
+				name: "Controller releases claimed pods when selector doesn't match",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					controller,
+					controllerLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
+				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+			}
+		}(),
+		func() test {
+			controller := testutilv1.NewTestJob(1)
+			controllerLabelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: testutilv1.GenLabels(controller.Name),
+			})
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			controller.UID = types.UID(controllerUID)
+			testPod1 := testutilv1.NewBasePod("pod1", controller, t)
+			testPod2 := testutilv1.NewBasePod("pod2", controller, t)
+			testPod2.Labels[testutilv1.LabelGroupName] = "testing"
+			now := metav1.Now()
+			testPod1.DeletionTimestamp = &now
+			testPod2.DeletionTimestamp = &now
+
+			return test{
+				name: "Controller does not claim orphaned pods marked for deletion",
+				manager: NewPodControllerRefManager(&FakePodControl{},
+					controller,
+					controllerLabelSelector,
+					testjobv1.SchemeGroupVersionKind,
+					func() error { return nil }),
+				pods: []*v1.Pod{testPod1, testPod2},
+				claimed:  []*v1.Pod{testPod1},
+			}
+		}(),
+	}
+	for _, test := range tests {
+		claimed, err := test.manager.ClaimPods(test.pods)
+		if err != nil {
+			t.Errorf("Test case `%s`, unexpected error: %v", test.name, err)
+		} else if !reflect.DeepEqual(test.claimed, claimed) {
+			t.Errorf("Test case `%s`, claimed wrong pods. Expected %v, got %v", test.name, podToStringSlice(test.claimed), podToStringSlice(claimed))
+		}
+
+	}
+}
+
+func podToStringSlice(pods []*v1.Pod) []string {
+	var names []string
+	for _, pod := range pods {
+		names = append(names, pod.Name)
+	}
+	return names
+}
+
 func TestClaimServices(t *testing.T) {
 	controllerUID := "123"
 

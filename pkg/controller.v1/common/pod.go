@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/kubernetes/pkg/controller"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	commonutil "github.com/kubeflow/common/pkg/util"
@@ -73,7 +72,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 			return
 		}
 
-		jobKey, err := controller.KeyFunc(job)
+		jobKey, err := KeyFunc(job)
 		if err != nil {
 			logger.Infof("Failed to get the jobkey: %v", err)
 			return
@@ -116,7 +115,7 @@ func (jc *JobController) UpdatePod(old, cur interface{}) {
 		// The ControllerRef was changed. Sync the old controller, if any.
 		if job := jc.resolveControllerRef(oldPod.Namespace, oldControllerRef); job != nil {
 			logger.Infof("pod ControllerRef updated: %v, %v", curPod, oldPod)
-			jobKey, err := controller.KeyFunc(job)
+			jobKey, err := KeyFunc(job)
 			if err != nil {
 				return
 			}
@@ -132,7 +131,7 @@ func (jc *JobController) UpdatePod(old, cur interface{}) {
 			return
 		}
 		logger.Debugf("pod has a ControllerRef: %v, %v", curPod, oldPod)
-		jobKey, err := controller.KeyFunc(job)
+		jobKey, err := KeyFunc(job)
 		if err != nil {
 			return
 		}
@@ -175,7 +174,7 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	if job == nil {
 		return
 	}
-	jobKey, err := controller.KeyFunc(job)
+	jobKey, err := KeyFunc(job)
 	if err != nil {
 		return
 	}

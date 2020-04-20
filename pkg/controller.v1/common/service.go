@@ -31,7 +31,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/kubernetes/pkg/controller"
 )
 
 var (
@@ -62,7 +61,7 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		jobKey, err := controller.KeyFunc(job)
+		jobKey, err := KeyFunc(job)
 		if err != nil {
 			return
 		}
