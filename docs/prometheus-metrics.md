@@ -30,7 +30,6 @@ The following metrics will be reported on each pod:
 | container_network_transmit_bytes_total | Counter | Cumulative count of bytes transmitted |
 | container_fs_usage_bytes | Gauge | Number of bytes that are consumed by the container on this filesystem |
 | up | Gauge | Keep-Alive check (maintained by Prometheus on its own with its `up` metric detailed in the documentation [here](https://prometheus.io/docs/concepts/jobs_instances/#automatically-generated-labels-and-time-series))) |
-| common_operator_is_leader | Gauge | Whether this client is the leader of this common operator client set |
 
 Note that some of the above metrics are derived from [cAdvisor](https://github.com/google/cadvisor) kubelet
 integration which reports to Prometheus through our prometheus-operator installation.
