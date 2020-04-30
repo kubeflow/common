@@ -26,6 +26,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"volcano.sh/volcano/pkg/apis/scheduling/v1beta1"
+	"github.com/kubeflow/common/pkg/controller.v1/control"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	volcanoclient "volcano.sh/volcano/pkg/client/clientset/versioned"
 )
 
@@ -83,6 +85,12 @@ type JobController struct {
 	Controller apiv1.ControllerInterface
 
 	Config JobControllerConfiguration
+
+	// podControl is used to add or delete pods.
+	PodControl control.PodControlInterface
+
+	// serviceControl is used to add or delete services.
+	ServiceControl control.ServiceControlInterface
 
 	// KubeClientSet is a standard kubernetes clientset.
 	KubeClientSet kubeclientset.Interface
@@ -147,6 +155,16 @@ func NewJobController(
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()})
 
+	podControl := control.RealPodControl{
+		KubeClient: kubeClientSet,
+		Recorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()}),
+	}
+
+	serviceControl := control.RealServiceControl{
+		KubeClient: kubeClientSet,
+		Recorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()}),
+	}
+
 	jobControllerConfig := JobControllerConfiguration{
 		ReconcilerSyncLoopPeriod: reconcilerSyncPeriod,
 		EnableGangScheduling:     enableGangScheduling,
@@ -155,6 +173,8 @@ func NewJobController(
 	jc := JobController{
 		Controller:       controllerImpl,
 		Config:           jobControllerConfig,
+		PodControl:       podControl,
+		ServiceControl:   serviceControl,
 		KubeClientSet:    kubeClientSet,
 		VolcanoClientSet: volcanoClientSet,
 		Expectations:     expectation.NewControllerExpectations(),
