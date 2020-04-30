@@ -26,14 +26,6 @@ type ControllerInterface interface {
 	// Returns the Job from API server
 	GetJobFromAPIClient(namespace, name string) (metav1.Object, error)
 
-	// GetPodsForJob returns the pods managed by the job. This can be achieved by selecting pods using label key "job-name"
-	// i.e. all pods created by the job will come with label "job-name" = <this_job_name>
-	GetPodsForJob(job interface{}) ([]*v1.Pod, error)
-
-	// GetServicesForJob returns the services managed by the job. This can be achieved by selecting services using label key "job-name"
-	// i.e. all services created by the job will come with label "job-name" = <this_job_name>
-	GetServicesForJob(job interface{}) ([]*v1.Service, error)
-
 	// DeleteJob deletes the job
 	DeleteJob(job interface{}) error
 
@@ -42,18 +34,6 @@ type ControllerInterface interface {
 
 	// UpdateJobStatusInApiServer updates the job status in API server
 	UpdateJobStatusInApiServer(job interface{}, jobStatus *JobStatus) error
-
-	// CreateService creates the service
-	CreateService(job interface{}, service *v1.Service) error
-
-	// DeleteService deletes the service
-	DeleteService(job interface{}, name string, namespace string) error
-
-	// CreatePod creates the pod
-	CreatePod(job interface{}, pod *v1.Pod) error
-
-	// DeletePod deletes the pod
-	DeletePod(job interface{}, pod *v1.Pod) error
 
 	// SetClusterSpec sets the cluster spec for the pod
 	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
