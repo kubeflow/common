@@ -4,29 +4,7 @@ This doc is a development guidance for Kubeflow/common developers.
 
 ## Git development cycle
 
-We use [git flow](https://guides.github.com/introduction/flow/) workflow. The steps are
-
-1. Fork `kubeflow/common` repo. 
-
-1. Clone your fork under GOPATH,  add the `kubeflow/common` repository as a remote.
-
-    ```bash
-    mkdir -p ${go env GOPATH}/src/github.com/kubeflow
-    cd ${go env GOPATH}/src/github.com/kubeflow
-    
-    git clone https://github.com/YOUR_USERNAME/common
-    cd common
-    git remote add upstream https://github.com/kubeflow/common
-    
-    git checkout -b your_feature_branch
-    git fetch upstream master
-    git rebase upstream/your_feature_branch
-    
-    ```
-
-1. Make you changes and commit your work.
-
-1. Send a pull request (PR) on GitHub. As we use squash merge, you can create multiple commit. You can also update a pull request using the the `git push -f` option as well. Please help to make your commits clean and meaningful.
+We use [git flow](https://guides.github.com/introduction/flow/) workflow and please check it out to get familiar with the process. 
 
 ## Before PR submission 
 
@@ -75,10 +53,9 @@ See issue [kubernetes/client-go/issues/332](https://github.com/kubernetes/client
 
 ## For repository owners
 
-Here's some guidelines for repository owners
+For the repository owners and maintainers, please check following guidance.
 
-
-### commit style guide
+### Commit style guide
 
 1. Always use bot to merge PRs, never manually merge PRs please.
 
