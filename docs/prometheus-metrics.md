@@ -44,18 +44,18 @@ The following metrics related to the lifecycle of jobs will be reported:
 | deleted_jobs_total | Counter | The total number of deleted jobs |
 | completed_jobs_total | Counter | The total number of completed jobs |
 | restarted_jobs_total | Counter | The total number of restarted jobs |
-| pending_jobs_total | Counter | The total number of pending jobs |
+| pending_jobs_total | Gauge | The total number of pending jobs |
 | failed_jobs_total | Counter | The total number of failed jobs |
-| running_jobs_total | Counter | The total number of running jobs |
+| running_jobs_total | Gauge | The total number of running jobs |
 
 The following metrics related to the duration among various job phases will be reported:
 
 | Metric Name | Metric Type | Description |
 | ----------- | ------------| ----------- |
-| from_created_to_completed_job_duration_seconds_total | Counter | The duration between job created and job completed in seconds |
-| from_completed_to_deleted_job_duration_seconds_total | Counter | The duration between job completed and job deleted in seconds |
-| from_failed_to_restarted_job_duration_seconds_total | Counter | The duration between job failed and job restarted in seconds |
-| from_pending_to_running_job_duration_seconds_total | Counter | The duration between job pending and job running in seconds |
+| from_created_to_completed_job_duration_seconds_total | Histogram | The duration between job created and job completed in seconds |
+| from_completed_to_deleted_job_duration_seconds_total | Histogram | The duration between job completed and job deleted in seconds |
+| from_failed_to_restarted_job_duration_seconds_total | Histogram | The duration between job failed and job restarted in seconds |
+| from_pending_to_running_job_duration_seconds_total | Histogram | The duration between job pending and job running in seconds |
 
 ## Service Metrics
 
