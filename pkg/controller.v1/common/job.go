@@ -30,11 +30,11 @@ func (jc *JobController) deletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 		if *runPolicy.CleanPodPolicy == apiv1.CleanPodPolicyRunning && pod.Status.Phase != v1.PodRunning {
 			continue
 		}
-		if err := jc.Controller.DeletePod(job, pod); err != nil {
+		if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, job.(runtime.Object)); err != nil {
 			return err
 		}
 		// Pod and service have the same name, thus the service could be deleted using pod's name.
-		if err := jc.Controller.DeleteService(job, pod.Name, pod.Namespace); err != nil {
+		if err := jc.ServiceControl.DeleteService(pod.Namespace, pod.Name, job.(runtime.Object)); err != nil {
 			return err
 		}
 	}
@@ -93,14 +93,13 @@ func (jc *JobController) ReconcileJobs(
 
 	oldStatus := jobStatus.DeepCopy()
 
-	pods, err := jc.Controller.GetPodsForJob(job)
-
+	pods, err := jc.GetPodsForJob(job)
 	if err != nil {
 		log.Warnf("GetPodsForJob error %v", err)
 		return err
 	}
 
-	services, err := jc.Controller.GetServicesForJob(job)
+	services, err := jc.GetServicesForJob(job)
 
 	if err != nil {
 		log.Warnf("GetServicesForJob error %v", err)
@@ -191,12 +190,9 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	}
 
-	// Save the current state of the replicas
-	replicasStatus := make(map[string]v1.PodPhase)
-
 	// Diff current active pods/services with replicas.
 	for rtype, spec := range replicas {
-		err := jc.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicasStatus, replicas)
+		err := jc.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
 		if err != nil {
 			log.Warnf("ReconcilePods error %v", err)
 			return err
