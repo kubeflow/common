@@ -15,11 +15,12 @@ package common
 
 import (
 	"fmt"
-	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"strconv"
 	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"github.com/kubeflow/common/pkg/controller.v1/control"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ func (jc *JobController) AddService(obj interface{}) {
 		}
 
 		rtype := service.Labels[apiv1.ReplicaTypeLabel]
-		expectationServicesKey := GenExpectationServicesKey(jobKey, rtype)
+		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
 		// TODO: we may need add backoff here
@@ -244,7 +245,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 
 	// Convert ReplicaType to lower string.
 	rt := strings.ToLower(string(rtype))
-	expectationServicesKey := GenExpectationServicesKey(jobKey, rt)
+	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rt)
 	err = jc.Expectations.ExpectCreations(expectationServicesKey, 1)
 	if err != nil {
 		return err
