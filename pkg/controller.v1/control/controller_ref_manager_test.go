@@ -30,10 +30,10 @@ func TestClaimPods(t *testing.T) {
 	controllerUID := "123"
 
 	type test struct {
-		name     string
-		manager  *PodControllerRefManager
-		pods []*v1.Pod
-		claimed  []*v1.Pod
+		name    string
+		manager *PodControllerRefManager
+		pods    []*v1.Pod
+		claimed []*v1.Pod
 	}
 	var tests = []test{
 		func() test {
@@ -54,8 +54,8 @@ func TestClaimPods(t *testing.T) {
 					testJobLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t), testPod},
-				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t)},
+				pods:    []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t), testPod},
+				claimed: []*v1.Pod{testutilv1.NewBasePod("pod1", testJob, t)},
 			}
 		}(),
 		func() test {
@@ -80,8 +80,8 @@ func TestClaimPods(t *testing.T) {
 					controllerLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testPod1, testPod2},
-				claimed:  nil,
+				pods:    []*v1.Pod{testPod1, testPod2},
+				claimed: nil,
 			}
 		}(),
 		func() test {
@@ -104,8 +104,8 @@ func TestClaimPods(t *testing.T) {
 					controllerLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
-				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+				pods:    []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
+				claimed: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
 			}
 		}(),
 		func() test {
@@ -126,8 +126,8 @@ func TestClaimPods(t *testing.T) {
 					controllerLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testutilv1.NewBasePod("pod2", controller2, t)},
-				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+				pods:    []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testutilv1.NewBasePod("pod2", controller2, t)},
+				claimed: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
 			}
 		}(),
 		func() test {
@@ -148,8 +148,8 @@ func TestClaimPods(t *testing.T) {
 					controllerLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
-				claimed:  []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
+				pods:    []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t), testPod2},
+				claimed: []*v1.Pod{testutilv1.NewBasePod("pod1", controller, t)},
 			}
 		}(),
 		func() test {
@@ -175,8 +175,8 @@ func TestClaimPods(t *testing.T) {
 					controllerLabelSelector,
 					testjobv1.SchemeGroupVersionKind,
 					func() error { return nil }),
-				pods: []*v1.Pod{testPod1, testPod2},
-				claimed:  []*v1.Pod{testPod1},
+				pods:    []*v1.Pod{testPod1, testPod2},
+				claimed: []*v1.Pod{testPod1},
 			}
 		}(),
 	}
