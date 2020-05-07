@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCalculateServiceSliceSize(t *testing.T) {

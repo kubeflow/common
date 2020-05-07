@@ -12,6 +12,7 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	log "github.com/sirupsen/logrus"
 	policyapi "k8s.io/api/policy/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"volcano.sh/volcano/pkg/apis/scheduling/v1beta1"
-	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	volcanoclient "volcano.sh/volcano/pkg/client/clientset/versioned"
 )
 
