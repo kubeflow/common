@@ -22,6 +22,8 @@ import (
 
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -48,6 +50,22 @@ const (
 	// podTemplateSchedulerNameReason is the warning reason when other scheduler name is set
 	// in pod templates with gang-scheduling enabled
 	podTemplateSchedulerNameReason = "SettedPodTemplateSchedulerName"
+)
+
+var (
+	// Prometheus metrics
+	createdPodsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "created_pods_total",
+		Help: "The total number of created pods",
+	})
+	deletedPodsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "deleted_pods_total",
+		Help: "The total number of deleted pods",
+	})
+	failedPodsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "failed_pods_total",
+		Help: "The total number of failed pods",
+	})
 )
 
 // When a pod is created, enqueue the job that manages it and update its expectations.
@@ -189,6 +207,7 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
+	deletedPodsCount.Inc()
 	// TODO: we may need add backoff here
 	jc.WorkQueue.Add(jobKey)
 }
@@ -334,6 +353,7 @@ func (jc *JobController) ReconcilePods(
 			// Check if the pod is retryable.
 			if spec.RestartPolicy == apiv1.RestartPolicyExitCode {
 				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
+					failedPodsCount.Inc()
 					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
 					if err := jc.Controller.DeletePod(job, pod); err != nil {
 						return err
@@ -466,6 +486,7 @@ func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodT
 			logger.Errorf("parentObject does not have ObjectMeta, %v", err)
 			return nil
 		}
+		createdPodsCount.Inc()
 		logger.Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
 		jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
 	}
