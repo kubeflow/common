@@ -11,6 +11,9 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +34,24 @@ var (
 	// IndexerInformer uses a delta queue, therefore for deletes we have to use this
 	// key function but it should be just fine for non delete events.
 	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+
+	// Prometheus metrics
+	createdPDBCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "created_pod_disruption_policies_total",
+		Help: "The total number of created pod disruption policies",
+	})
+	deletedPDBCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "deleted_pod_disruption_policies_total",
+		Help: "The total number of deleted pod disruption policies",
+	})
+	createdPodGroupsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "created_pod_groups_total",
+		Help: "The total number of created pod groups",
+	})
+	deletedPodGroupsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "deleted_pod_groups_total",
+		Help: "The total number of deleted pod groups",
+	})
 )
 
 // JobControllerConfiguration contains configuration of operator.
@@ -190,7 +211,12 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, minAvailableReplicas in
 			MinMember: minAvailable.IntVal,
 		},
 	}
-	return volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Create(createPodGroup)
+	createdPodGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Create(createPodGroup)
+	if err != nil {
+		return createdPodGroup, fmt.Errorf("unable to create PodGroup: %v", err)
+	}
+	createdPodGroupsCount.Inc()
+	return createdPodGroup, nil
 }
 
 // SyncPdb will create a PDB for gang scheduling by volcano.
@@ -224,13 +250,18 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 			},
 		},
 	}
-	return jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Create(createPdb)
+	createdPdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Create(createPdb)
+	if err != nil {
+		return createdPdb, fmt.Errorf("unable to create pdb: %v", err)
+	}
+	createdPDBCount.Inc()
+	return createdPdb, nil
 }
 
 func (jc *JobController) DeletePodGroup(job metav1.Object) error {
 	volcanoClientSet := jc.VolcanoClientSet
 
-	//check whether podGroup exists or not
+	// Check whether podGroup exists or not
 	_, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
 	if err != nil && k8serrors.IsNotFound(err) {
 		return nil
@@ -238,17 +269,18 @@ func (jc *JobController) DeletePodGroup(job metav1.Object) error {
 
 	log.Infof("Deleting PodGroup %s", job.GetName())
 
-	//delete podGroup
+	// Delete podGroup
 	err = volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Delete(job.GetName(), &metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to delete PodGroup: %v", err)
 	}
+	deletedPodGroupsCount.Inc()
 	return nil
 }
 
 func (jc *JobController) DeletePdb(job metav1.Object) error {
 
-	// Check the pdb exist or not
+	// Check whether pdb exists or not
 	_, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
 	if err != nil && k8serrors.IsNotFound(err) {
 		return nil
@@ -260,6 +292,7 @@ func (jc *JobController) DeletePdb(job metav1.Object) error {
 	if err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Delete(job.GetName(), &metav1.DeleteOptions{}); err != nil {
 		return fmt.Errorf("unable to delete pdb: %v", err)
 	}
+	deletedPDBCount.Inc()
 	return nil
 }
 
