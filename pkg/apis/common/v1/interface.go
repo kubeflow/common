@@ -44,9 +44,6 @@ type ControllerInterface interface {
 	// Get the default container port name
 	GetDefaultContainerPortName() string
 
-	// Get the default container port number
-	GetDefaultContainerPortNumber() int32
-
 	// Returns if this replica type with index specified is a master role.
 	// MasterRole pod will have "job-role=master" set in its label
 	IsMasterRole(replicas map[ReplicaType]*ReplicaSpec, rtype ReplicaType, index int) bool
