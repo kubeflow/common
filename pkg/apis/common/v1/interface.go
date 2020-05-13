@@ -47,4 +47,19 @@ type ControllerInterface interface {
 	// Returns if this replica type with index specified is a master role.
 	// MasterRole pod will have "job-role=master" set in its label
 	IsMasterRole(replicas map[ReplicaType]*ReplicaSpec, rtype ReplicaType, index int) bool
+
+	// ReconcileJobs checks and updates replicas for each given ReplicaSpec of a job.
+	// Common implementation will be provided and User can still override this to implement their own reconcile logic
+	ReconcileJobs(job interface{}, replicas map[ReplicaType]*ReplicaSpec, jobStatus JobStatus, runPolicy *RunPolicy) error
+
+	// ReconcilePods checks and updates pods for each given ReplicaSpec.
+	// It will requeue the job in case of an error while creating/deleting pods.
+	// Common implementation will be provided and User can still override this to implement their own reconcile logic
+	ReconcilePods(job interface{}, jobStatus *JobStatus, pods []*v1.Pod, rtype ReplicaType, spec *ReplicaSpec,
+		replicas map[ReplicaType]*ReplicaSpec) error
+
+	// ReconcileServices checks and updates services for each given ReplicaSpec.
+	// It will requeue the job in case of an error while creating/deleting services.
+	// Common implementation will be provided and User can still override this to implement their own reconcile logic
+	ReconcileServices(job metav1.Object, services []*v1.Service, rtype ReplicaType, spec *ReplicaSpec) error
 }

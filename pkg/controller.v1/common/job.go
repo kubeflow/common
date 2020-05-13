@@ -16,7 +16,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func (jc *JobController) deletePodsAndServices(runPolicy *apiv1.RunPolicy, job interface{}, pods []*v1.Pod) error {
+func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job interface{}, pods []*v1.Pod) error {
 	if len(pods) == 0 {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (jc *JobController) ReconcileJobs(
 		exceedsBackoffLimit = jobHasNewFailure && (active != totalReplicas) &&
 			(int32(previousRetry)+1 > *runPolicy.BackoffLimit)
 
-		pastBackoffLimit, err = jc.pastBackoffLimit(jobName, runPolicy, replicas, pods)
+		pastBackoffLimit, err = jc.PastBackoffLimit(jobName, runPolicy, replicas, pods)
 		if err != nil {
 			return err
 		}
@@ -139,18 +139,18 @@ func (jc *JobController) ReconcileJobs(
 		// OR if the number of failed jobs increased since the last syncJob
 		jobExceedsLimit = true
 		failureMessage = fmt.Sprintf("Job %s has failed because it has reached the specified backoff limit", jobName)
-	} else if jc.pastActiveDeadline(runPolicy, jobStatus) {
+	} else if jc.PastActiveDeadline(runPolicy, jobStatus) {
 		failureMessage = fmt.Sprintf("Job %s has failed because it was active longer than specified deadline", jobName)
 		jobExceedsLimit = true
 	}
 
 	// If the Job is terminated, delete all pods and services.
 	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) || jobExceedsLimit {
-		if err := jc.deletePodsAndServices(runPolicy, job, pods); err != nil {
+		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
 			return err
 		}
 
-		if err := jc.cleanupJob(runPolicy, jobStatus, job); err != nil {
+		if err := jc.CleanupJob(runPolicy, jobStatus, job); err != nil {
 			return err
 		}
 
@@ -192,13 +192,13 @@ func (jc *JobController) ReconcileJobs(
 
 	// Diff current active pods/services with replicas.
 	for rtype, spec := range replicas {
-		err := jc.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
+		err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
 		if err != nil {
 			log.Warnf("ReconcilePods error %v", err)
 			return err
 		}
 
-		err = jc.ReconcileServices(metaObject, services, rtype, spec)
+		err = jc.Controller.ReconcileServices(metaObject, services, rtype, spec)
 
 		if err != nil {
 			log.Warnf("ReconcileServices error %v", err)
@@ -218,8 +218,8 @@ func (jc *JobController) ReconcileJobs(
 	return nil
 }
 
-// pastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
-func (jc *JobController) pastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) bool {
+// PastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
+func (jc *JobController) PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) bool {
 	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil {
 		return false
 	}
@@ -230,9 +230,9 @@ func (jc *JobController) pastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatu
 	return duration >= allowedDuration
 }
 
-// pastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
+// PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
 // this method applies only to pods with restartPolicy == OnFailure or Always
-func (jc *JobController) pastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
+func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
 	if runPolicy.BackoffLimit == nil {
 		return false, nil
@@ -271,7 +271,7 @@ func (jc *JobController) pastBackoffLimit(jobName string, runPolicy *apiv1.RunPo
 	return result >= *runPolicy.BackoffLimit, nil
 }
 
-func (jc *JobController) cleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
+func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
 	currentTime := time.Now()
 	metaObject, _ := job.(metav1.Object)
 	ttl := runPolicy.TTLSecondsAfterFinished

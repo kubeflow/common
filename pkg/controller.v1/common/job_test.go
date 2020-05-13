@@ -65,7 +65,7 @@ func TestDeletePodsAndServices(T *testing.T) {
 		}
 
 		job := &testjobv1.TestJob{}
-		err := mainJobController.deletePodsAndServices(&runPolicy, job, allPods)
+		err := mainJobController.DeletePodsAndServices(&runPolicy, job, allPods)
 
 		if assert.NoError(T, err) {
 			if tc.deleteRunningPodAndService {
@@ -120,7 +120,7 @@ func TestPastBackoffLimit(T *testing.T) {
 			BackoffLimit: &tc.backOffLimit,
 		}
 
-		result, err := mainJobController.pastBackoffLimit("fake-job", &runPolicy, nil, allPods)
+		result, err := mainJobController.PastBackoffLimit("fake-job", &runPolicy, nil, allPods)
 
 		if assert.NoError(T, err) {
 			assert.Equal(T, result, tc.shouldPassBackoffLimit)
@@ -161,7 +161,7 @@ func TestPastActiveDeadline(T *testing.T) {
 			},
 		}
 
-		result := mainJobController.pastActiveDeadline(&runPolicy, jobStatus)
+		result := mainJobController.PastActiveDeadline(&runPolicy, jobStatus)
 		assert.Equal(
 			T, result, tc.shouldPassActiveDeadline,
 			"Result is not expected for activeDeadlineSeconds == "+strconv.FormatInt(tc.activeDeadlineSeconds, 10))
@@ -216,7 +216,7 @@ func TestCleanupJob(T *testing.T) {
 	}
 
 	var job interface{}
-	err := mainJobController.cleanupJob(&runPolicy, jobStatus, job)
+	err := mainJobController.CleanupJob(&runPolicy, jobStatus, job)
 	if assert.NoError(T, err) {
 		assert.Empty(T, testJobController.Job)
 	}

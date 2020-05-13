@@ -12,6 +12,7 @@ import (
 var _ commonv1.ControllerInterface = &TestJobController{}
 
 type TestJobController struct {
+	commonv1.ControllerInterface
 	Job      *v1.TestJob
 	Pods     []*corev1.Pod
 	Services []*corev1.Service
