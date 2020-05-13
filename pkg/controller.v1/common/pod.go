@@ -49,7 +49,7 @@ const (
 	// podTemplateSchedulerNameReason is the warning reason when other scheduler name is set
 	// in pod templates with gang-scheduling enabled
 	podTemplateSchedulerNameReason = "SettedPodTemplateSchedulerName"
-
+	// gangSchedulingPodGroupAnnotation is the annotation key used by batch schedulers
 	gangSchedulingPodGroupAnnotation = "scheduling.k8s.io/group-name"
 )
 
@@ -481,7 +481,10 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
-		podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = metaObject.GetName()
+
+		if jc.Config.EnableGangScheduling {
+			podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = metaObject.GetName()
+		}
 	}
 
 	controllerRef := jc.GenOwnerReference(metaObject)
