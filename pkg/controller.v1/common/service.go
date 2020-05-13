@@ -328,9 +328,12 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		// uninitialized for a long time, the informer will not
 		// receive any update, and the controller will create a new
 		// service when the expectation expires.
+		succeededServiceCreationCount.Inc()
 		return nil
 	} else if err != nil {
+		failedServiceCreationCount.Inc()
 		return err
 	}
+	succeededServiceCreationCount.Inc()
 	return nil
 }
