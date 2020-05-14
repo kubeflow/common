@@ -20,19 +20,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/kubernetes/pkg/controller"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	commonutil "github.com/kubeflow/common/pkg/util"
@@ -50,6 +49,8 @@ const (
 	// podTemplateSchedulerNameReason is the warning reason when other scheduler name is set
 	// in pod templates with gang-scheduling enabled
 	podTemplateSchedulerNameReason = "SettedPodTemplateSchedulerName"
+	// gangSchedulingPodGroupAnnotation is the annotation key used by batch schedulers
+	gangSchedulingPodGroupAnnotation = "scheduling.k8s.io/group-name"
 )
 
 var (
@@ -212,6 +213,46 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	jc.WorkQueue.Add(jobKey)
 }
 
+// getPodsForJob returns the set of pods that this job should manage.
+// It also reconciles ControllerRef by adopting/orphaning.
+// Note that the returned Pods are pointers into the cache.
+func (jc *JobController) GetPodsForJob(jobObject interface{}) ([]*v1.Pod, error) {
+	job, ok := jobObject.(metav1.Object)
+	if !ok {
+		return nil, fmt.Errorf("job is not of type metav1.Object")
+	}
+
+	// Create selector.
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: jc.GenLabels(job.GetName()),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("couldn't convert Job selector: %v", err)
+	}
+	// List all pods to include those that don't match the selector anymore
+	// but have a ControllerRef pointing to this controller.
+	pods, err := jc.PodLister.Pods(job.GetNamespace()).List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	// If any adoptions are attempted, we should first recheck for deletion
+	// with an uncached quorum read sometime after listing Pods (see #42639).
+	canAdoptFunc := RecheckDeletionTimestamp(func() (metav1.Object, error) {
+		fresh, err := jc.Controller.GetJobFromAPIClient(job.GetNamespace(), job.GetName())
+		if err != nil {
+			return nil, err
+		}
+		if fresh.GetUID() != job.GetUID() {
+			return nil, fmt.Errorf("original Job %v/%v is gone: got uid %v, wanted %v", job.GetNamespace(), job.GetName(), fresh.GetUID(), job.GetUID())
+		}
+		return fresh, nil
+	})
+	cm := controller.NewPodControllerRefManager(jc.PodControl, job, selector, jc.Controller.GetAPIGroupVersionKind(), canAdoptFunc)
+	return cm.ClaimPods(pods)
+}
+
 // FilterPodsForReplicaType returns pods belong to a replicaType.
 func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
 	var result []*v1.Pod
@@ -284,7 +325,6 @@ func (jc *JobController) ReconcilePods(
 	pods []*v1.Pod,
 	rtype apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec,
-	rstatus map[string]v1.PodPhase,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
@@ -334,7 +374,7 @@ func (jc *JobController) ReconcilePods(
 
 			// check if the index is in the valid range, if not, we should kill the pod
 			if index < 0 || index >= numReplicas {
-				err = jc.Controller.DeletePod(job, pod)
+				err = jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject)
 				if err != nil {
 					return err
 				}
@@ -355,7 +395,7 @@ func (jc *JobController) ReconcilePods(
 				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
 					failedPodsCount.Inc()
 					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
-					if err := jc.Controller.DeletePod(job, pod); err != nil {
+					if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject); err != nil {
 						return err
 					}
 				}
@@ -437,10 +477,18 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 		} else {
 			podTemplate.Spec.SchedulerName = gangSchedulerName
 		}
-	}
-	controllerRef := jc.GenOwnerReference(metaObject)
 
-	err = jc.createPodWithControllerRef(metaObject.GetNamespace(), podTemplate, runtimeObject, controllerRef)
+		if podTemplate.Annotations == nil {
+			podTemplate.Annotations = map[string]string{}
+		}
+
+		if jc.Config.EnableGangScheduling {
+			podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = metaObject.GetName()
+		}
+	}
+
+	controllerRef := jc.GenOwnerReference(metaObject)
+	err = jc.PodControl.CreatePodsWithControllerRef(metaObject.GetNamespace(), podTemplate, runtimeObject, controllerRef)
 	if err != nil && errors.IsTimeout(err) {
 		// Pod is created but its initialization has timed out.
 		// If the initialization is successful eventually, the
@@ -453,43 +501,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 	} else if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (jc *JobController) createPodWithControllerRef(namespace string, template *v1.PodTemplateSpec,
-	controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := control.ValidateControllerRef(controllerRef); err != nil {
-		return err
-	}
-	return jc.createPod("", namespace, template, controllerObject, controllerRef)
-}
-
-func (jc *JobController) createPod(nodeName, namespace string, template *v1.PodTemplateSpec, object runtime.Object, controllerRef *metav1.OwnerReference) error {
-	pod, err := control.GetPodFromTemplate(template, object, controllerRef)
-	pod.Namespace = namespace
-	if err != nil {
-		return err
-	}
-	if len(nodeName) != 0 {
-		pod.Spec.NodeName = nodeName
-	}
-	if labels.Set(pod.Labels).AsSelectorPreValidated().Empty() {
-		return fmt.Errorf("unable to create pods, no labels")
-	}
-	if err := jc.Controller.CreatePod(object, pod); err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreatePodReason, "Error creating: %v", err)
-		return err
-	} else {
-		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
-		accessor, err := meta.Accessor(object)
-		if err != nil {
-			logger.Errorf("parentObject does not have ObjectMeta, %v", err)
-			return nil
-		}
-		createdPodsCount.Inc()
-		logger.Infof("Controller %v created pod %v", accessor.GetName(), pod.Name)
-		jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreatePodReason, "Created pod: %v", pod.Name)
-	}
+	createdPodsCount.Inc()
 	return nil
 }
 

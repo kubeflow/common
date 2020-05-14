@@ -27,7 +27,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -95,6 +94,46 @@ func (jc *JobController) UpdateService(old, cur interface{}) {
 // obj could be an *v1.Service, or a DeletionFinalStateUnknown marker item.
 func (jc *JobController) DeleteService(obj interface{}) {
 	// TODO(CPH): handle this gracefully.
+}
+
+// getServicesForJob returns the set of services that this job should manage.
+// It also reconciles ControllerRef by adopting/orphaning.
+// Note that the returned services are pointers into the cache.
+func (jc *JobController) GetServicesForJob(jobObject interface{}) ([]*v1.Service, error) {
+	job, ok := jobObject.(metav1.Object)
+	if !ok {
+		return nil, fmt.Errorf("job is not of type metav1.Object")
+	}
+
+	// Create selector
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: jc.GenLabels(job.GetName()),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("couldn't convert Job selector: %v", err)
+	}
+	// List all services to include those that don't match the selector anymore
+	// but have a ControllerRef pointing to this controller.
+	services, err := jc.ServiceLister.Services(job.GetNamespace()).List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	// If any adoptions are attempted, we should first recheck for deletion
+	// with an uncached quorum read sometime after listing services (see #42639).
+	canAdoptFunc := RecheckDeletionTimestamp(func() (metav1.Object, error) {
+		fresh, err := jc.Controller.GetJobFromInformerCache(job.GetNamespace(), job.GetName())
+		if err != nil {
+			return nil, err
+		}
+		if fresh.GetUID() != job.GetUID() {
+			return nil, fmt.Errorf("original Job %v/%v is gone: got uid %v, wanted %v", job.GetNamespace(), job.GetName(), fresh.GetUID(), job.GetUID())
+		}
+		return fresh, nil
+	})
+	cm := control.NewServiceControllerRefManager(jc.ServiceControl, job, selector, jc.Controller.GetAPIGroupVersionKind(), canAdoptFunc)
+	return cm.ClaimServices(services)
 }
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
@@ -203,7 +242,7 @@ func (jc *JobController) ReconcileServices(
 
 			// check if the index is in the valid range, if not, we should kill the svc
 			if index < 0 || index >= replicas {
-				err = jc.Controller.DeleteService(job, svc.Name, svc.Namespace)
+				err = jc.ServiceControl.DeleteService(svc.Namespace, svc.Name, job.(runtime.Object))
 				if err != nil {
 					return err
 				}
@@ -280,7 +319,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 	// Create OwnerReference.
 	controllerRef := jc.GenOwnerReference(job)
 
-	err = jc.CreateServicesWithControllerRef(job.GetNamespace(), service, job.(runtime.Object), controllerRef)
+	err = jc.ServiceControl.CreateServicesWithControllerRef(job.GetNamespace(), service, job.(runtime.Object), controllerRef)
 	if err != nil && errors.IsTimeout(err) {
 		// Service is created but its initialization has timed out.
 		// If the initialization is successful eventually, the
@@ -289,46 +328,12 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		// uninitialized for a long time, the informer will not
 		// receive any update, and the controller will create a new
 		// service when the expectation expires.
+		succeededServiceCreationCount.Inc()
 		return nil
 	} else if err != nil {
+		failedServiceCreationCount.Inc()
 		return err
 	}
-	return nil
-}
-
-func (jc *JobController) CreateServicesWithControllerRef(namespace string, service *v1.Service, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if err := control.ValidateControllerRef(controllerRef); err != nil {
-		return err
-	}
-	return jc.createServices(namespace, service, controllerObject, controllerRef)
-}
-
-func (jc *JobController) createServices(namespace string, service *v1.Service, object runtime.Object, controllerRef *metav1.OwnerReference) error {
-	if labels.Set(service.Labels).AsSelectorPreValidated().Empty() {
-		return fmt.Errorf("unable to create Services, no labels")
-	}
-	serviceWithOwner, err := control.GetServiceFromTemplate(service, object, controllerRef)
-	serviceWithOwner.Namespace = namespace
-	if err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
-		failedServiceCreationCount.Inc()
-		return fmt.Errorf("unable to create services: %v", err)
-	}
-
-	err = jc.Controller.CreateService(object, serviceWithOwner)
-	if err != nil {
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, control.FailedCreateServiceReason, "Error creating: %v", err)
-		failedServiceCreationCount.Inc()
-		return fmt.Errorf("unable to create services: %v", err)
-	}
-
-	accessor, err := meta.Accessor(object)
-	if err != nil {
-		log.Errorf("parentObject does not have ObjectMeta, %v", err)
-		return nil
-	}
-	log.Infof("Controller %v created service %v", accessor.GetName(), serviceWithOwner.Name)
-	jc.Recorder.Eventf(object, v1.EventTypeNormal, control.SuccessfulCreateServiceReason, "Created service: %v", serviceWithOwner.Name)
 	succeededServiceCreationCount.Inc()
 	return nil
 }

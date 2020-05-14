@@ -1,13 +1,14 @@
 package common
 
 import (
-	testjob "github.com/kubeflow/common/test_job/controller.v1/test_job"
 	"strconv"
 	"testing"
 	"time"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/test_job/apis/test_job/v1"
+	"github.com/kubeflow/common/pkg/controller.v1/control"
+	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	testjob "github.com/kubeflow/common/test_job/controller.v1/test_job"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,35 +52,40 @@ func TestDeletePodsAndServices(T *testing.T) {
 			Services: allServices,
 		}
 
+		fakePodControl := &control.FakePodControl{}
+		fakeServiceControl := &control.FakeServiceControl{}
+
 		mainJobController := JobController{
-			Controller: &testJobController,
+			Controller:     &testJobController,
+			PodControl:     fakePodControl,
+			ServiceControl: fakeServiceControl,
 		}
 		runPolicy := apiv1.RunPolicy{
 			CleanPodPolicy: &tc.cleanPodPolicy,
 		}
 
-		var job interface{}
+		job := &testjobv1.TestJob{}
 		err := mainJobController.deletePodsAndServices(&runPolicy, job, allPods)
 
 		if assert.NoError(T, err) {
 			if tc.deleteRunningPodAndService {
 				// should delete the running pod and its service
-				assert.NotContains(T, testJobController.Pods, runningPod)
-				assert.NotContains(T, testJobController.Services, runningPodService)
+				assert.Contains(T, fakePodControl.DeletePodName, runningPod.Name)
+				assert.Contains(T, fakeServiceControl.DeleteServiceName, runningPodService.Name)
 			} else {
 				// should NOT delete the running pod and its service
-				assert.Contains(T, testJobController.Pods, runningPod)
-				assert.Contains(T, testJobController.Services, runningPodService)
+				assert.NotContains(T, fakePodControl.DeletePodName, runningPod.Name)
+				assert.NotContains(T, fakeServiceControl.DeleteServiceName, runningPodService.Name)
 			}
 
 			if tc.deleteSucceededPodAndService {
 				// should delete the SUCCEEDED pod and its service
-				assert.NotContains(T, testJobController.Pods, succeededPod)
-				assert.NotContains(T, testJobController.Services, succeededPodService)
+				assert.Contains(T, fakePodControl.DeletePodName, succeededPod.Name)
+				assert.Contains(T, fakeServiceControl.DeleteServiceName, succeededPodService.Name)
 			} else {
 				// should NOT delete the SUCCEEDED pod and its service
-				assert.Contains(T, testJobController.Pods, succeededPod)
-				assert.Contains(T, testJobController.Services, succeededPodService)
+				assert.NotContains(T, fakePodControl.DeletePodName, succeededPod.Name)
+				assert.NotContains(T, fakeServiceControl.DeleteServiceName, succeededPodService.Name)
 			}
 		}
 	}
@@ -177,7 +183,7 @@ func TestCleanupJobIfTTL(T *testing.T) {
 	}
 
 	testJobController := &testjob.TestJobController{
-		Job: &v1.TestJob{},
+		Job: &testjobv1.TestJob{},
 	}
 	mainJobController := JobController{
 		Controller: testJobController,
@@ -203,7 +209,7 @@ func TestCleanupJob(T *testing.T) {
 	}
 
 	testJobController := &testjob.TestJobController{
-		Job: &v1.TestJob{},
+		Job: &testjobv1.TestJob{},
 	}
 	mainJobController := JobController{
 		Controller: testJobController,
