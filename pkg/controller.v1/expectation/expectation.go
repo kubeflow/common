@@ -82,7 +82,7 @@ func (r *ControllerExpectations) GetExpectations(controllerKey string) (*Control
 func (r *ControllerExpectations) DeleteExpectations(controllerKey string) {
 	if exp, exists, err := r.GetByKey(controllerKey); err == nil && exists {
 		if err := r.Delete(exp); err != nil {
-			log.Infof("Error deleting expectations for controller %v: %v", controllerKey, err)
+			log.Debugf("Error deleting expectations for controller %v: %v", controllerKey, err)
 		}
 	}
 }
@@ -93,24 +93,24 @@ func (r *ControllerExpectations) DeleteExpectations(controllerKey string) {
 func (r *ControllerExpectations) SatisfiedExpectations(controllerKey string) bool {
 	if exp, exists, err := r.GetExpectations(controllerKey); exists {
 		if exp.Fulfilled() {
-			log.Infof("Controller expectations fulfilled %#v", exp)
+			log.Debugf("Controller expectations fulfilled %#v", exp)
 			return true
 		} else if exp.isExpired() {
-			log.Infof("Controller expectations expired %#v", exp)
+			log.Debugf("Controller expectations expired %#v", exp)
 			return true
 		} else {
-			log.Infof("Controller still waiting on expectations %#v", exp)
+			log.Debugf("Controller still waiting on expectations %#v", exp)
 			return false
 		}
 	} else if err != nil {
-		log.Infof("Error encountered while checking expectations %#v, forcing sync", err)
+		log.Debugf("Error encountered while checking expectations %#v, forcing sync", err)
 	} else {
 		// When a new controller is created, it doesn't have expectations.
 		// When it doesn't see expected watch events for > TTL, the expectations expire.
 		//	- In this case it wakes up, creates/deletes controllees, and sets expectations again.
 		// When it has satisfied expectations and no controllees need to be created/destroyed > TTL, the expectations expire.
 		//	- In this case it continues without setting expectations till it needs to create/delete controllees.
-		log.Infof("Controller %v either never recorded expectations, or the ttl expired.", controllerKey)
+		log.Debugf("Controller %v either never recorded expectations, or the ttl expired.", controllerKey)
 	}
 	// Trigger a sync if we either encountered and error (which shouldn't happen since we're
 	// getting from local store) or this controller hasn't established expectations.
@@ -127,7 +127,7 @@ func (exp *ControlleeExpectations) isExpired() bool {
 // SetExpectations registers new expectations for the given controller. Forgets existing expectations.
 func (r *ControllerExpectations) SetExpectations(controllerKey string, add, del int) error {
 	exp := &ControlleeExpectations{add: int64(add), del: int64(del), key: controllerKey, timestamp: clock.RealClock{}.Now()}
-	log.Infof("Setting expectations %#v", exp)
+	log.Debugf("Setting expectations %#v", exp)
 	return r.Add(exp)
 }
 
@@ -144,7 +144,7 @@ func (r *ControllerExpectations) LowerExpectations(controllerKey string, add, de
 	if exp, exists, err := r.GetExpectations(controllerKey); err == nil && exists {
 		exp.Add(int64(-add), int64(-del))
 		// The expectations might've been modified since the update on the previous line.
-		log.Infof("Lowered expectations %#v", exp)
+		log.Debugf("Lowered expectations %#v", exp)
 	}
 }
 
@@ -153,7 +153,7 @@ func (r *ControllerExpectations) RaiseExpectations(controllerKey string, add, de
 	if exp, exists, err := r.GetExpectations(controllerKey); err == nil && exists {
 		exp.Add(int64(add), int64(del))
 		// The expectations might've been modified since the update on the previous line.
-		log.Infof("Raised expectations %#v", exp)
+		log.Debugf("Raised expectations %#v", exp)
 	}
 }
 
