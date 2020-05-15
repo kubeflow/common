@@ -93,14 +93,13 @@ func (jc *JobController) ReconcileJobs(
 
 	oldStatus := jobStatus.DeepCopy()
 
-	pods, err := jc.GetPodsForJob(job)
+	pods, err := jc.Controller.GetPodsForJob(job)
 	if err != nil {
 		log.Warnf("GetPodsForJob error %v", err)
 		return err
 	}
 
-	services, err := jc.GetServicesForJob(job)
-
+	services, err := jc.Controller.GetServicesForJob(job)
 	if err != nil {
 		log.Warnf("GetServicesForJob error %v", err)
 		return err
