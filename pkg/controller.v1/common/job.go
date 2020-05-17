@@ -214,6 +214,14 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	} else {
 		// General cases which need to reconcile
+		if jc.Config.EnableGangScheduling {
+			minAvailableReplicas := totalReplicas
+			_, err := jc.SyncPodGroup(metaObject, minAvailableReplicas)
+			if err != nil {
+				log.Warnf("Sync PodGroup %v: %v", jobKey, err)
+			}
+		}
+
 		// Diff current active pods/services with replicas.
 		for rtype, spec := range replicas {
 			err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
