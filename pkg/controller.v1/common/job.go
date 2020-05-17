@@ -91,8 +91,6 @@ func (jc *JobController) ReconcileJobs(
 	}
 	log.Infof("Reconciling for job %s", metaObject.GetName())
 
-	oldStatus := jobStatus.DeepCopy()
-
 	pods, err := jc.Controller.GetPodsForJob(job)
 	if err != nil {
 		log.Warnf("GetPodsForJob error %v", err)
@@ -103,6 +101,45 @@ func (jc *JobController) ReconcileJobs(
 	if err != nil {
 		log.Warnf("GetServicesForJob error %v", err)
 		return err
+	}
+
+	oldStatus := jobStatus.DeepCopy()
+	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) {
+		// If the Job is succeed or failed, delete all pods and services.
+		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
+			return err
+		}
+
+		if err := jc.CleanupJob(runPolicy, jobStatus, job); err != nil {
+			return err
+		}
+
+		if jc.Config.EnableGangScheduling {
+			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
+			if err := jc.DeletePodGroup(metaObject); err != nil {
+				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
+				return err
+			} else {
+				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
+			}
+		}
+
+		// At this point the pods may have been deleted.
+		// 1) If the job succeeded, we manually set the replica status.
+		// 2) If any replicas are still active, set their status to succeeded.
+		if commonutil.IsSucceeded(jobStatus) {
+			for rtype := range jobStatus.ReplicaStatuses {
+				jobStatus.ReplicaStatuses[rtype].Succeeded += jobStatus.ReplicaStatuses[rtype].Active
+				jobStatus.ReplicaStatuses[rtype].Active = 0
+			}
+		}
+
+		// No need to update the job status if the status hasn't changed since last time.
+		if !reflect.DeepEqual(*oldStatus, jobStatus) {
+			return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
+		}
+
+		return nil
 	}
 
 	// retrieve the previous number of retry
@@ -143,8 +180,9 @@ func (jc *JobController) ReconcileJobs(
 		jobExceedsLimit = true
 	}
 
-	// If the Job is terminated, delete all pods and services.
-	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) || jobExceedsLimit {
+	if jobExceedsLimit {
+		// If the Job exceeds backoff limit or is past active deadline
+		// delete all pods and services, then set the status to failed
 		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
 			return err
 		}
@@ -160,48 +198,36 @@ func (jc *JobController) ReconcileJobs(
 				return err
 			} else {
 				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
-
 			}
 		}
 
-		if jobExceedsLimit {
-			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
-			if jobStatus.CompletionTime == nil {
-				now := metav1.Now()
-				jobStatus.CompletionTime = &now
-			}
-			err := commonutil.UpdateJobConditions(&jobStatus, apiv1.JobFailed, commonutil.JobFailedReason, failureMessage)
+		jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
+		if jobStatus.CompletionTime == nil {
+			now := metav1.Now()
+			jobStatus.CompletionTime = &now
+		}
+		if err := commonutil.UpdateJobConditions(&jobStatus, apiv1.JobFailed, commonutil.JobFailedReason, failureMessage); err != nil {
+			log.Infof("Append job condition error: %v", err)
+			return err
+		}
+
+		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
+	} else {
+		// General cases which need to reconcile
+		// Diff current active pods/services with replicas.
+		for rtype, spec := range replicas {
+			err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
 			if err != nil {
-				log.Infof("Append job condition error: %v", err)
+				log.Warnf("ReconcilePods error %v", err)
 				return err
 			}
-		}
 
-		// At this point the pods may have been deleted.
-		// 1) If the job succeeded, we manually set the replica status.
-		// 2) If any replicas are still active, set their status to succeeded.
-		if commonutil.IsSucceeded(jobStatus) {
-			for rtype := range jobStatus.ReplicaStatuses {
-				jobStatus.ReplicaStatuses[rtype].Succeeded += jobStatus.ReplicaStatuses[rtype].Active
-				jobStatus.ReplicaStatuses[rtype].Active = 0
+			err = jc.Controller.ReconcileServices(metaObject, services, rtype, spec)
+
+			if err != nil {
+				log.Warnf("ReconcileServices error %v", err)
+				return err
 			}
-		}
-		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
-	}
-
-	// Diff current active pods/services with replicas.
-	for rtype, spec := range replicas {
-		err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
-		if err != nil {
-			log.Warnf("ReconcilePods error %v", err)
-			return err
-		}
-
-		err = jc.Controller.ReconcileServices(metaObject, services, rtype, spec)
-
-		if err != nil {
-			log.Warnf("ReconcileServices error %v", err)
-			return err
 		}
 	}
 
