@@ -1,5 +1,13 @@
 # Kubeflow Common Releases
 
+## Release v0.3.1
+
+* Skip some logics for terminated job and add PodGroup reconcile loop ([#93](https://github.com/kubeflow/common/pull/93), @Jeffwan)
+* Provides more flexibility for customizations ([#91](https://github.com/kubeflow/common/pull/91), @Jeffwan)
+* Change expectation package log level to debug ([#90](https://github.com/kubeflow/common/pull/90), @Jeffwan)
+* Bump Kubernetes dependency to 1.16.9 ([#87](https://github.com/kubeflow/common/pull/87), @Jeffwan)
+* Add release notes document ([#88](https://github.com/kubeflow/common/pull/88), @terrytangyuan)
+
 ## Release v0.3.0
 
 * Simplify interfaces and remove useless interfaces ([#85](https://github.com/kubeflow/common/pull/85), @Jeffwan)
