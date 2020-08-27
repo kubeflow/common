@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -65,6 +66,26 @@ func (jc *JobController) cleanupJobIfTTL(runPolicy *apiv1.RunPolicy, jobStatus a
 	}
 	jc.WorkQueue.AddRateLimited(key)
 	return nil
+}
+
+
+// recordAbnormalPods records the active pod whose latest condition is not in True status.
+func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime.Object) {
+	for _, pod := range activePods {
+		if len(pod.Status.Conditions) == 0 {
+			continue
+		}
+		// Should not modify the original pod which is stored the informer.
+		status := pod.Status.DeepCopy()
+		sort.Slice(status.Conditions, func(i, j int) bool {
+			return status.Conditions[i].LastTransitionTime.After(status.Conditions[j].LastTransitionTime.Time)
+		})
+		condition := status.Conditions[0]
+		if condition.Status == v1.ConditionTrue {
+			continue
+		}
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, condition.Reason, "Error pod %s condition: %s", pod.Name, condition.Message)
+	}
 }
 
 // ReconcileJobs checks and updates replicas for each given ReplicaSpec.
@@ -146,6 +167,9 @@ func (jc *JobController) ReconcileJobs(
 	previousRetry := jc.WorkQueue.NumRequeues(jobKey)
 
 	activePods := k8sutil.FilterActivePods(pods)
+
+	jc.recordAbnormalPods(activePods, runtimeObject)
+
 	active := int32(len(activePods))
 	failed := k8sutil.FilterPodCount(pods, v1.PodFailed)
 	totalReplicas := k8sutil.GetTotalReplicas(replicas)
