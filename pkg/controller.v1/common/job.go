@@ -72,6 +72,34 @@ func (jc *JobController) cleanupJobIfTTL(runPolicy *apiv1.RunPolicy, jobStatus a
 // recordAbnormalPods records the active pod whose latest condition is not in True status.
 func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime.Object) {
 	for _, pod := range activePods {
+		// If the pod starts running, should checks the container statuses rather than the conditions.
+		recordContainerStatus := func(status *v1.ContainerStatus) {
+			if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
+				terminated := status.State.Terminated
+				jc.Recorder.Eventf(object, v1.EventTypeWarning, terminated.Reason,
+					"Error pod %s container %s exitCode: %d terminated message: %s",
+					pod.Name, status.Name, terminated.ExitCode, terminated.Message)
+			}
+			// The terminated state and waiting state don't simultaneously exists, checks them at the same time.
+			if status.State.Waiting != nil && status.State.Waiting.Message != "" {
+				wait := status.State.Waiting
+				jc.Recorder.Eventf(object, v1.EventTypeWarning, wait.Reason,
+					"Error pod %s container %s waiting message: %s", pod.Name, status.Name, wait.Message)
+			}
+		}
+		if len(pod.Status.ContainerStatuses) != 0 {
+			for _, status := range pod.Status.ContainerStatuses {
+				recordContainerStatus(&status)
+			}
+			// If the pod has container status info, that means the init container statuses are normal.
+			continue
+		}
+		if len(pod.Status.InitContainerStatuses) != 0 {
+			for _, status := range pod.Status.ContainerStatuses {
+				recordContainerStatus(&status)
+			}
+			continue
+		}
 		if len(pod.Status.Conditions) == 0 {
 			continue
 		}
