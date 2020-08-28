@@ -84,7 +84,7 @@ func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime
 		if condition.Status == v1.ConditionTrue {
 			continue
 		}
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, condition.Reason, "Error pod %s condition: %s", pod.Name, condition.Message)
+		jc.Recorder.Eventf(object, v1.EventTypeWarning, condition.Reason, "Error pod %s condition message: %s", pod.Name, condition.Message)
 	}
 }
 
