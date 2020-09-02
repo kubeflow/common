@@ -95,7 +95,7 @@ func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime
 			continue
 		}
 		if len(pod.Status.InitContainerStatuses) != 0 {
-			for _, status := range pod.Status.ContainerStatuses {
+			for _, status := range pod.Status.InitContainerStatuses {
 				recordContainerStatus(&status)
 			}
 			continue
