@@ -29,7 +29,7 @@ func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 
 	for _, pod := range pods {
 		// Note that pending pod will turn to be running once schedulable,
-		// not cleaning it may leave there orphan running pod in the fure,
+		// not cleaning it may leave there orphan running pod in the future,
 		// we should treet it equivalent to running phase here.
 		if *runPolicy.CleanPodPolicy == apiv1.CleanPodPolicyRunning && pod.Status.Phase != v1.PodRunning && pod.Status.Phase != v1.PodPending {
 			continue
