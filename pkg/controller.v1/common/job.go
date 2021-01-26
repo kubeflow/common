@@ -236,6 +236,12 @@ func (jc *JobController) ReconcileJobs(
 	}
 
 	if jobExceedsLimit {
+		// Set job completion time before resource cleanup
+		if jobStatus.CompletionTime == nil {
+			now := metav1.Now()
+			jobStatus.CompletionTime = &now
+		}
+
 		// If the Job exceeds backoff limit or is past active deadline
 		// delete all pods and services, then set the status to failed
 		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
@@ -257,10 +263,7 @@ func (jc *JobController) ReconcileJobs(
 		}
 
 		jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
-		if jobStatus.CompletionTime == nil {
-			now := metav1.Now()
-			jobStatus.CompletionTime = &now
-		}
+
 		if err := commonutil.UpdateJobConditions(&jobStatus, apiv1.JobFailed, commonutil.JobFailedReason, failureMessage); err != nil {
 			log.Infof("Append job condition error: %v", err)
 			return err
