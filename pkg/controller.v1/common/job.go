@@ -157,6 +157,12 @@ func (jc *JobController) ReconcileJobs(
 
 	oldStatus := jobStatus.DeepCopy()
 	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) {
+		// Set job completion time before resource cleanup
+		if jobStatus.CompletionTime == nil {
+			now := metav1.Now()
+			jobStatus.CompletionTime = &now
+		}
+
 		// If the Job is succeed or failed, delete all pods and services.
 		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
 			return err
