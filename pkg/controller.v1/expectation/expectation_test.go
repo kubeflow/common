@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/kubernetes/pkg/securitycontext"
 )
 
 var (
@@ -56,7 +55,6 @@ func newReplicationController(replicas int) *v1.ReplicationController {
 							Image:                  "foo/bar",
 							TerminationMessagePath: v1.TerminationMessagePathDefault,
 							ImagePullPolicy:        v1.PullIfNotPresent,
-							SecurityContext:        securitycontext.ValidSecurityContextWithContainerDefaults(),
 						},
 					},
 					RestartPolicy: v1.RestartPolicyAlways,
