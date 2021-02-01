@@ -16,25 +16,28 @@ package control
 
 import (
 	"encoding/json"
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
 	"net/http/httptest"
 	"testing"
 
+	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
+
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientset "k8s.io/client-go/kubernetes"
+	clientscheme "k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	utiltesting "k8s.io/client-go/util/testing"
-	"k8s.io/kubernetes/pkg/api/testapi"
 )
 
 func TestCreatePods(t *testing.T) {
 	ns := metav1.NamespaceDefault
-	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "empty_pod"}})
+	body := runtime.EncodeOrDie(
+		clientscheme.Codecs.LegacyCodec(v1.SchemeGroupVersion),
+		&v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "empty_pod"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
 		ResponseBody: body,
@@ -67,7 +70,8 @@ func TestCreatePods(t *testing.T) {
 		},
 		Spec: podTemplate.Spec,
 	}
-	fakeHandler.ValidateRequest(t, testapi.Default.ResourcePath("pods", metav1.NamespaceDefault, ""), "POST", nil)
+	fakeHandler.ValidateRequest(t,
+		"/api/v1/namespaces/default/pods", "POST", nil)
 	var actualPod = &v1.Pod{}
 	err = json.Unmarshal([]byte(fakeHandler.RequestBody), actualPod)
 	assert.NoError(t, err, "unexpected error: %v", err)

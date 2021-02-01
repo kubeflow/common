@@ -16,25 +16,28 @@ package control
 
 import (
 	"encoding/json"
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientset "k8s.io/client-go/kubernetes"
+	clientscheme "k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	utiltesting "k8s.io/client-go/util/testing"
-	"k8s.io/kubernetes/pkg/api/testapi"
+
+	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
 )
 
 func TestCreateService(t *testing.T) {
 	ns := metav1.NamespaceDefault
-	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
+	body := runtime.EncodeOrDie(
+		clientscheme.Codecs.LegacyCodec(v1.SchemeGroupVersion),
+		&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
 		ResponseBody: body,
@@ -70,7 +73,8 @@ func TestCreateService(t *testing.T) {
 			Namespace: ns,
 		},
 	}
-	fakeHandler.ValidateRequest(t, testapi.Default.ResourcePath("services", metav1.NamespaceDefault, ""), "POST", nil)
+	fakeHandler.ValidateRequest(t,
+		"/api/v1/namespaces/default/services", "POST", nil)
 	var actualService = &v1.Service{}
 	err = json.Unmarshal([]byte(fakeHandler.RequestBody), actualService)
 	assert.NoError(t, err, "unexpected error: %v", err)
@@ -80,7 +84,9 @@ func TestCreateService(t *testing.T) {
 
 func TestCreateServicesWithControllerRef(t *testing.T) {
 	ns := metav1.NamespaceDefault
-	body := runtime.EncodeOrDie(testapi.Default.Codec(), &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
+	body := runtime.EncodeOrDie(
+		clientscheme.Codecs.LegacyCodec(v1.SchemeGroupVersion),
+		&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "empty_service"}})
 	fakeHandler := utiltesting.FakeHandler{
 		StatusCode:   200,
 		ResponseBody: body,
@@ -119,7 +125,8 @@ func TestCreateServicesWithControllerRef(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
 	}
-	fakeHandler.ValidateRequest(t, testapi.Default.ResourcePath("services", metav1.NamespaceDefault, ""), "POST", nil)
+	fakeHandler.ValidateRequest(t,
+		"/api/v1/namespaces/default/services", "POST", nil)
 	var actualService = &v1.Service{}
 	err = json.Unmarshal([]byte(fakeHandler.RequestBody), actualService)
 	assert.NoError(t, err, "unexpected error: %v", err)
