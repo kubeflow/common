@@ -19,8 +19,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
-
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -31,6 +29,8 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	utiltesting "k8s.io/client-go/util/testing"
+
+	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
 )
 
 func TestCreatePods(t *testing.T) {
