@@ -1,0 +1,133 @@
+// Generated documentation. Please do not edit.
+:anchor_prefix: k8s-api
+
+[id="{p}-api-reference"]
+= API Reference
+
+.Packages
+- xref:{anchor_prefix}-kubeflow-org-v1[$$kubeflow.org/v1$$]
+
+
+[id="{anchor_prefix}-kubeflow-org-v1"]
+== kubeflow.org/v1
+
+Package v1 is the v1 version of the API.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+=== Definitions
+
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobcondition"]
+==== JobCondition 
+
+JobCondition describes the state of the job at a certain point.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobstatus[$$JobStatus$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`type`* __xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobconditiontype[$$JobConditionType$$]__ | Type of job condition.
+| *`status`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#conditionstatus-v1-core[$$ConditionStatus$$]__ | Status of the condition, one of True, False, Unknown.
+| *`reason`* __string__ | The reason for the condition's last transition.
+| *`message`* __string__ | A human readable message indicating details about the transition.
+| *`lastUpdateTime`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#time-v1-meta[$$Time$$]__ | The last time this condition was updated.
+| *`lastTransitionTime`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#time-v1-meta[$$Time$$]__ | Last time the condition transitioned from one status to another.
+|===
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobconditiontype"]
+==== JobConditionType (string) 
+
+JobConditionType defines all kinds of types of JobStatus.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobcondition[$$JobCondition$$]
+****
+
+
+
+
+
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-replicastatus"]
+==== ReplicaStatus 
+
+ReplicaStatus represents the current observed state of the replica.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobstatus[$$JobStatus$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`active`* __integer__ | The number of actively running pods.
+| *`succeeded`* __integer__ | The number of pods which reached phase Succeeded.
+| *`failed`* __integer__ | The number of pods which reached phase Failed.
+|===
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-replicatype"]
+==== ReplicaType (string) 
+
+ReplicaType represents the type of the replica. Each operator needs to define its own set of ReplicaTypes.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-jobstatus[$$JobStatus$$]
+****
+
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-restartpolicy"]
+==== RestartPolicy (string) 
+
+RestartPolicy describes how the replicas should be restarted. Only one of the following restart policies may be specified. If none of the following policies is specified, the default one is RestartPolicyAlways.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-replicaspec[$$ReplicaSpec$$]
+****
+
+
+
+
+
+[id="{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-schedulingpolicy"]
+==== SchedulingPolicy 
+
+SchedulingPolicy encapsulates various scheduling policies of the distributed training job, for example `minAvailable` for gang-scheduling.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubeflow-common-pkg-apis-common-v1-runpolicy[$$RunPolicy$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`minAvailable`* __integer__ | 
+|===
+
+
