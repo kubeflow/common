@@ -49,6 +49,9 @@ jobController := common.JobController {
 Note that this repo is still under construction, API compatibility is not guaranteed at this point.
 
 ## API Reference
+
+Please refer to the [API documentation](docs/api/generated.asciidoc).
+
 The API fies are located under `pkg/apis/common/v1`:
 
 - [constants.go](pkg/apis/common/v1/constants.go): the constants such as label keys.
