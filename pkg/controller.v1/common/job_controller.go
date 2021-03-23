@@ -26,8 +26,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"volcano.sh/volcano/pkg/apis/scheduling/v1beta1"
-	volcanoclient "volcano.sh/volcano/pkg/client/clientset/versioned"
+	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
+	volcanoclient "volcano.sh/apis/pkg/client/clientset/versioned"
 )
 
 var (

@@ -17,7 +17,7 @@ require (
 	k8s.io/client-go v0.16.9
 	k8s.io/code-generator v0.16.9
 	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
-	volcano.sh/volcano v0.4.0
+	volcano.sh/apis v1.16.15
 )
 
 replace (
