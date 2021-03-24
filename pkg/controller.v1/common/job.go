@@ -276,6 +276,7 @@ func (jc *JobController) ReconcileJobs(
 			minMember := totalReplicas
 			queue := ""
 			priorityClass := ""
+			var minResources *v1.ResourceList
 
 			if runPolicy.SchedulingPolicy != nil {
 				if runPolicy.SchedulingPolicy.MinAvailable != nil {
@@ -289,13 +290,21 @@ func (jc *JobController) ReconcileJobs(
 				if runPolicy.SchedulingPolicy.PriorityClass != "" {
 					priorityClass = runPolicy.SchedulingPolicy.PriorityClass
 				}
+
+				if runPolicy.SchedulingPolicy.MinResources != nil {
+					minResources = runPolicy.SchedulingPolicy.MinResources
+				}
+			}
+
+			if minResources == nil {
+				minResources = jc.calcPGMinResources(minMember, replicas)
 			}
 
 			pgSpec := v1beta1.PodGroupSpec{
 				MinMember:         minMember,
 				Queue:             queue,
 				PriorityClassName: priorityClass,
-				MinResources:      jc.calcPGMinResources(minMember, replicas),
+				MinResources:      minResources,
 			}
 
 			_, err := jc.SyncPodGroup(metaObject, pgSpec)
