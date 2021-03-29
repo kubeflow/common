@@ -10,12 +10,12 @@ require (
 	github.com/prometheus/client_golang v1.5.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
-	k8s.io/api v0.16.9
-	k8s.io/apimachinery v0.16.9
-	k8s.io/client-go v0.16.9
-	k8s.io/code-generator v0.16.9
+	k8s.io/api v0.16.15
+	k8s.io/apimachinery v0.16.15
+	k8s.io/client-go v0.16.15
+	k8s.io/code-generator v0.18.3
 	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
-	volcano.sh/volcano v0.4.0
+	volcano.sh/apis v1.16.15
 )
 
 replace (
