@@ -407,5 +407,7 @@ sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e/go.mod h1:w
 sigs.k8s.io/structured-merge-diff v1.0.2/go.mod h1:IIgPezJWb76P0hotTxzDbWsMYB8APh18qZnxkomBpxA=
 sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
+volcano.sh/apis v0.0.0-20210329030435-0fc6d5a26ade h1:ZO+Qfqg4++uBEp4Vxl0f57tkikKPVVwD4JWOLMZedto=
+volcano.sh/apis v0.0.0-20210329030435-0fc6d5a26ade/go.mod h1:VUOxh5KqX+izy5N8FHd9CUwrwzDkPKsn5OevPFvSYBw=
 volcano.sh/apis v1.16.15 h1:ZmgAMWiQhDsEnMbgqq0F9gQskkrz8f/LdH3YoVZZktc=
 volcano.sh/apis v1.16.15/go.mod h1:VUOxh5KqX+izy5N8FHd9CUwrwzDkPKsn5OevPFvSYBw=
