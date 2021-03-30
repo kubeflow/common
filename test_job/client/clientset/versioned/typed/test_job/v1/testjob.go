@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
@@ -69,7 +70,7 @@ func (c *testJobs) Get(name string, options metav1.GetOptions) (result *v1.TestJ
 		Resource("testjobs").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -86,7 +87,7 @@ func (c *testJobs) List(opts metav1.ListOptions) (result *v1.TestJobList, err er
 		Resource("testjobs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -103,7 +104,7 @@ func (c *testJobs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("testjobs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a testJob and creates it.  Returns the server's representation of the testJob, and an error, if there is any.
@@ -113,7 +114,7 @@ func (c *testJobs) Create(testJob *v1.TestJob) (result *v1.TestJob, err error) {
 		Namespace(c.ns).
 		Resource("testjobs").
 		Body(testJob).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -126,7 +127,7 @@ func (c *testJobs) Update(testJob *v1.TestJob) (result *v1.TestJob, err error) {
 		Resource("testjobs").
 		Name(testJob.Name).
 		Body(testJob).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -142,7 +143,7 @@ func (c *testJobs) UpdateStatus(testJob *v1.TestJob) (result *v1.TestJob, err er
 		Name(testJob.Name).
 		SubResource("status").
 		Body(testJob).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -154,7 +155,7 @@ func (c *testJobs) Delete(name string, options *metav1.DeleteOptions) error {
 		Resource("testjobs").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -170,7 +171,7 @@ func (c *testJobs) DeleteCollection(options *metav1.DeleteOptions, listOptions m
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -183,7 +184,7 @@ func (c *testJobs) Patch(name string, pt types.PatchType, data []byte, subresour
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
