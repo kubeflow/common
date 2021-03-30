@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"context"
 	time "time"
 
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
@@ -59,13 +60,13 @@ func NewFilteredTestJobInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.KubeflowV1().TestJobs(namespace).List(options)
+				return client.KubeflowV1().TestJobs(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.KubeflowV1().TestJobs(namespace).Watch(options)
+				return client.KubeflowV1().TestJobs(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&testjobv1.TestJob{},
