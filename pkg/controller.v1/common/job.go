@@ -307,9 +307,15 @@ func (jc *JobController) ReconcileJobs(
 				MinResources:      minResources,
 			}
 
-			_, err := jc.SyncPodGroup(metaObject, pgSpec)
+			pg, err := jc.SyncPodGroup(metaObject, pgSpec)
 			if err != nil {
 				log.Warnf("Sync PodGroup %v: %v", jobKey, err)
+				return nil
+			}
+
+			if pg == nil || pg.Status.Phase == "" || pg.Status.Phase == v1beta1.PodGroupPending {
+				log.Warnf("PodGroup %v unschedulable", jobKey)
+				return nil
 			}
 		}
 
