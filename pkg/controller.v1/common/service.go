@@ -253,7 +253,7 @@ func (jc *JobController) ReconcileServices(
 }
 
 // GetPortsFromJob gets the ports of job container. Port could be nil, if distributed communication strategy doesn't need and no other ports that need to be exposed.
-func (jc *JobController) GetPortsFromJob(spec *apiv1.ReplicaSpec) (*map[string]int32, error) {
+func (jc *JobController) GetPortsFromJob(spec *apiv1.ReplicaSpec) (map[string]int32, error) {
 	ports := make(map[string]int32)
 
 	containers := spec.Template.Spec.Containers
@@ -266,7 +266,7 @@ func (jc *JobController) GetPortsFromJob(spec *apiv1.ReplicaSpec) (*map[string]i
 			for _, port := range containerPorts {
 				ports[port.Name] = port.ContainerPort
 			}
-			return &ports, nil
+			return ports, nil
 		}
 	}
 
@@ -310,7 +310,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 
 	// Add service ports to headless service
 	if ports != nil {
-		for name, port := range *ports {
+		for name, port := range ports {
 			svcPort := v1.ServicePort{Name: name, Port: port}
 			service.Spec.Ports = append(service.Spec.Ports, svcPort)
 		}
