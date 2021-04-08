@@ -309,11 +309,9 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 	}
 
 	// Add service ports to headless service
-	if ports != nil {
-		for name, port := range ports {
-			svcPort := v1.ServicePort{Name: name, Port: port}
-			service.Spec.Ports = append(service.Spec.Ports, svcPort)
-		}
+	for name, port := range ports {
+		svcPort := v1.ServicePort{Name: name, Port: port}
+		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
 	service.Name = GenGeneralName(job.GetName(), rt, index)
