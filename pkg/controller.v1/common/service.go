@@ -25,7 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -252,24 +252,24 @@ func (jc *JobController) ReconcileServices(
 	return nil
 }
 
-// GetPortFromJob gets the port of job container. Port could be nil depending on different distributed communication strategy
-func (jc *JobController) GetPortFromJob(spec *apiv1.ReplicaSpec) (*int32, error) {
-	// Consider the case controller doesn't use fixed port, headless service without port will enable random pod to pod communication
-	if jc.Controller.GetDefaultContainerPortName() == "" {
-		return nil, nil
-	}
+// GetPortsFromJob gets the ports of job container. Port could be nil, if distributed communication strategy doesn't need and no other ports that need to be exposed.
+func (jc *JobController) GetPortsFromJob(spec *apiv1.ReplicaSpec) (map[string]int32, error) {
+	ports := make(map[string]int32)
 
 	containers := spec.Template.Spec.Containers
 	for _, container := range containers {
 		if container.Name == jc.Controller.GetDefaultContainerName() {
-			ports := container.Ports
-			for _, port := range ports {
-				if port.Name == jc.Controller.GetDefaultContainerPortName() {
-					return &port.ContainerPort, nil
-				}
+			containerPorts := container.Ports
+			if len(containerPorts) == 0 {
+				return nil, nil
 			}
+			for _, port := range containerPorts {
+				ports[port.Name] = port.ContainerPort
+			}
+			return ports, nil
 		}
 	}
+
 	return nil, fmt.Errorf("failed to find the port")
 }
 
@@ -295,7 +295,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 	labels[apiv1.ReplicaTypeLabel] = rt
 	labels[apiv1.ReplicaIndexLabel] = index
 
-	port, err := jc.GetPortFromJob(spec)
+	ports, err := jc.GetPortsFromJob(spec)
 	if err != nil {
 		return err
 	}
@@ -308,9 +308,9 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		},
 	}
 
-	// Add service port to headless service only if port is set from controller implementation
-	if port != nil {
-		svcPort := v1.ServicePort{Name: jc.Controller.GetDefaultContainerPortName(), Port: *port}
+	// Add service ports to headless service
+	for name, port := range ports {
+		svcPort := v1.ServicePort{Name: name, Port: port}
 		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
