@@ -29,7 +29,13 @@ CODEGEN_VERSION=$(grep 'k8s.io/code-generator' go.sum | awk '{print $2}' | head 
 CODEGEN_PKG=$(echo `go env GOPATH`"/pkg/mod/k8s.io/code-generator@${CODEGEN_VERSION}")
 
 # Grab kube-openapi version from go.sum
+# Due to dependency issue, we use go.mod to pin right version
 OPENAPI_VERSION=$(grep 'k8s.io/kube-openapi' go.mod | awk '{print $2}' | head -1)
+# remove /go.mod if it happens to match the version
+if [[ $OPENAPI_VERSION == */go.mod ]]; then
+    OPENAPI_VERSION=${OPENAPI_VERSION%/*}
+fi
+
 OPENAPI_PKG=$(echo `go env GOPATH`"/pkg/mod/k8s.io/kube-openapi@${OPENAPI_VERSION}")
 
 if [[ ! -d ${CODEGEN_PKG} || ! -d ${OPENAPI_PKG} ]]; then
@@ -104,4 +110,3 @@ ${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/test_job/apis/
 
 ## Copy everything back.
 cp -a "${TEMP_DIR}/${ROOT_PKG}/." "${SCRIPT_ROOT}/"
-

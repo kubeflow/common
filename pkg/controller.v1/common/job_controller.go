@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -219,7 +220,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, pgSpec v1beta1.PodGroup
 
 	volcanoClientSet := jc.VolcanoClientSet
 	// Check whether podGroup exists or not
-	podGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
+	podGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
 	if err == nil {
 		return podGroup, nil
 	}
@@ -236,7 +237,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, pgSpec v1beta1.PodGroup
 		},
 		Spec: pgSpec,
 	}
-	createdPodGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Create(createPodGroup)
+	createdPodGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Create(context.TODO(), createPodGroup, metav1.CreateOptions{})
 	if err != nil {
 		return createdPodGroup, fmt.Errorf("unable to create PodGroup: %v", err)
 	}
@@ -249,7 +250,7 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 	labelJobName := apiv1.JobNameLabel
 
 	// Check the pdb exist or not
-	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
+	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
 	if err == nil || !k8serrors.IsNotFound(err) {
 		if err == nil {
 			err = errors.New(string(metav1.StatusReasonAlreadyExists))
@@ -275,7 +276,7 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 			},
 		},
 	}
-	createdPdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Create(createPdb)
+	createdPdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Create(context.TODO(), createPdb, metav1.CreateOptions{})
 	if err != nil {
 		return createdPdb, fmt.Errorf("unable to create pdb: %v", err)
 	}
@@ -287,7 +288,7 @@ func (jc *JobController) DeletePodGroup(job metav1.Object) error {
 	volcanoClientSet := jc.VolcanoClientSet
 
 	// Check whether podGroup exists or not
-	_, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
+	_, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
 	if err != nil && k8serrors.IsNotFound(err) {
 		return nil
 	}
@@ -295,7 +296,7 @@ func (jc *JobController) DeletePodGroup(job metav1.Object) error {
 	log.Infof("Deleting PodGroup %s", job.GetName())
 
 	// Delete podGroup
-	err = volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Delete(job.GetName(), &metav1.DeleteOptions{})
+	err = volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Delete(context.TODO(), job.GetName(), metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to delete PodGroup: %v", err)
 	}
@@ -306,7 +307,7 @@ func (jc *JobController) DeletePodGroup(job metav1.Object) error {
 func (jc *JobController) DeletePdb(job metav1.Object) error {
 
 	// Check whether pdb exists or not
-	_, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(job.GetName(), metav1.GetOptions{})
+	_, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
 	if err != nil && k8serrors.IsNotFound(err) {
 		return nil
 	}
@@ -314,7 +315,7 @@ func (jc *JobController) DeletePdb(job metav1.Object) error {
 	msg := fmt.Sprintf("Deleting pdb %s", job.GetName())
 	log.Info(msg)
 
-	if err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Delete(job.GetName(), &metav1.DeleteOptions{}); err != nil {
+	if err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Delete(context.TODO(), job.GetName(), metav1.DeleteOptions{}); err != nil {
 		return fmt.Errorf("unable to delete pdb: %v", err)
 	}
 	deletedPDBCount.Inc()

@@ -15,6 +15,7 @@
 package control
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -65,7 +66,7 @@ type RealServiceControl struct {
 }
 
 func (r RealServiceControl) PatchService(namespace, name string, data []byte) error {
-	_, err := r.KubeClient.CoreV1().Services(namespace).Patch(name, types.StrategicMergePatchType, data)
+	_, err := r.KubeClient.CoreV1().Services(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -90,7 +91,7 @@ func (r RealServiceControl) createServices(namespace string, service *v1.Service
 		return fmt.Errorf("unable to create services: %v", err)
 	}
 
-	newService, err := r.KubeClient.CoreV1().Services(namespace).Create(serviceWithOwner)
+	newService, err := r.KubeClient.CoreV1().Services(namespace).Create(context.TODO(), serviceWithOwner, metav1.CreateOptions{})
 	if err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
@@ -113,7 +114,7 @@ func (r RealServiceControl) DeleteService(namespace, serviceID string, object ru
 	if err != nil {
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
 	}
-	service, err := r.KubeClient.CoreV1().Services(namespace).Get(serviceID, metav1.GetOptions{})
+	service, err := r.KubeClient.CoreV1().Services(namespace).Get(context.TODO(), serviceID, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -125,7 +126,7 @@ func (r RealServiceControl) DeleteService(namespace, serviceID string, object ru
 		return nil
 	}
 	log.Infof("Controller %v deleting service %v/%v", accessor.GetName(), namespace, serviceID)
-	if err := r.KubeClient.CoreV1().Services(namespace).Delete(serviceID, nil); err != nil {
+	if err := r.KubeClient.CoreV1().Services(namespace).Delete(context.TODO(), serviceID, metav1.DeleteOptions{}); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeleteServiceReason, "Error deleting: %v", err)
 		return fmt.Errorf("unable to delete service: %v", err)
 	} else {

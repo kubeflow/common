@@ -15,6 +15,7 @@
 package control
 
 import (
+	"context"
 	"fmt"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	"k8s.io/api/core/v1"
@@ -110,7 +111,7 @@ func (r RealPodControl) CreatePodsOnNode(nodeName, namespace string, template *v
 }
 
 func (r RealPodControl) PatchPod(namespace, name string, data []byte) error {
-	_, err := r.KubeClient.CoreV1().Pods(namespace).Patch(name, types.StrategicMergePatchType, data)
+	_, err := r.KubeClient.CoreV1().Pods(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -146,7 +147,7 @@ func (r RealPodControl) createPods(nodeName, namespace string, template *v1.PodT
 		return fmt.Errorf("unable to create pods, no labels")
 	}
 	logger := commonutil.LoggerForPod(pod, object.GetObjectKind().GroupVersionKind().Kind)
-	if newPod, err := r.KubeClient.CoreV1().Pods(namespace).Create(pod); err != nil {
+	if newPod, err := r.KubeClient.CoreV1().Pods(namespace).Create(context.TODO(), pod, metav1.CreateOptions{}); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
 		return err
 	} else {
@@ -167,7 +168,7 @@ func (r RealPodControl) DeletePod(namespace string, podID string, object runtime
 		return fmt.Errorf("object does not have ObjectMeta, %v", err)
 	}
 	logger := commonutil.LoggerForJob(accessor)
-	pod, err := r.KubeClient.CoreV1().Pods(namespace).Get(podID, metav1.GetOptions{})
+	pod, err := r.KubeClient.CoreV1().Pods(namespace).Get(context.TODO(), podID, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -179,7 +180,8 @@ func (r RealPodControl) DeletePod(namespace string, podID string, object runtime
 		return nil
 	}
 	logger.Infof("Controller %v deleting pod %v/%v", accessor.GetName(), namespace, podID)
-	if err := r.KubeClient.CoreV1().Pods(namespace).Delete(podID, nil); err != nil {
+	// delete options
+	if err := r.KubeClient.CoreV1().Pods(namespace).Delete(context.TODO(), podID, metav1.DeleteOptions{}); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeletePodReason, "Error deleting: %v", err)
 		return fmt.Errorf("unable to delete pods: %v", err)
 	} else {

@@ -24,8 +24,10 @@ import (
 )
 
 // TestJobLister helps list TestJobs.
+// All objects returned here must be treated as read-only.
 type TestJobLister interface {
 	// List lists all TestJobs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.TestJob, err error)
 	// TestJobs returns an object that can list and get TestJobs.
 	TestJobs(namespace string) TestJobNamespaceLister
@@ -56,10 +58,13 @@ func (s *testJobLister) TestJobs(namespace string) TestJobNamespaceLister {
 }
 
 // TestJobNamespaceLister helps list and get TestJobs.
+// All objects returned here must be treated as read-only.
 type TestJobNamespaceLister interface {
 	// List lists all TestJobs in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.TestJob, err error)
 	// Get retrieves the TestJob from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.TestJob, error)
 	TestJobNamespaceListerExpansion
 }
