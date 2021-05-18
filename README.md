@@ -52,9 +52,9 @@ Note that this repo is still under construction, API compatibility is not guaran
 
 Please refer to the [API documentation](docs/api/generated.asciidoc).
 
-The API fies are located under `pkg/apis/common/v1`:
+The API files are located under `pkg/apis/common/v1`:
 
 - [constants.go](pkg/apis/common/v1/constants.go): the constants such as label keys.
 - [interface.go](pkg/apis/common/v1/interface.go): the interfaces to be implemented by custom controllers.
 - [controller.go](pkg/controller.v1/common/job_controller.go): the main `JobController` that contains the `ReconcileJobs` API method to be invoked by user. This is the entrypoint of
-the JobController logic. The rest of code under `job_controller/` folder contains the core logic for the `JobController` to work, such as creating and managing worker pods, services etc.
+the `JobController` logic. The rest of the code under `job_controller/` folder contains the core logic for the `JobController` to work, such as creating and managing worker pods, services, etc.
