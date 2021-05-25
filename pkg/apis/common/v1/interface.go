@@ -44,7 +44,7 @@ type ControllerInterface interface {
 	UpdateJobStatusInApiServer(job interface{}, jobStatus *JobStatus) error
 
 	// SetClusterSpec sets the cluster spec for the pod
-	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
+	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype ReplicaType, index string) error
 
 	// Returns the default container name in pod
 	GetDefaultContainerName() string

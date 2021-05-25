@@ -15,9 +15,6 @@ package common
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
-
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
@@ -31,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"strconv"
 )
 
 var (
@@ -71,8 +69,8 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		rtype := service.Labels[apiv1.ReplicaTypeLabel]
-		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
+		rtypeValue := service.Labels[apiv1.ReplicaTypeLabel]
+		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, apiv1.ReplicaType(rtypeValue))
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
 		// TODO: we may need add backoff here
@@ -137,14 +135,14 @@ func (jc *JobController) GetServicesForJob(jobObject interface{}) ([]*v1.Service
 }
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
-func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType string) ([]*v1.Service, error) {
+func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType apiv1.ReplicaType) ([]*v1.Service, error) {
 	var result []*v1.Service
 
 	replicaSelector := &metav1.LabelSelector{
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = replicaType
+	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = string(replicaType)
 
 	for _, service := range services {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -209,12 +207,9 @@ func (jc *JobController) ReconcileServices(
 	rtype apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec) error {
 
-	// Convert ReplicaType to lower string.
-	rt := strings.ToLower(string(rtype))
-
 	replicas := int(*spec.Replicas)
 	// Get all services for the type rt.
-	services, err := jc.FilterServicesForReplicaType(services, rt)
+	services, err := jc.FilterServicesForReplicaType(services, rtype)
 	if err != nil {
 		return err
 	}
@@ -225,13 +220,13 @@ func (jc *JobController) ReconcileServices(
 	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
 	//
 	// If replica is 1, return a slice with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
-	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
+	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rtype))
 
 	for index, serviceSlice := range serviceSlices {
 		if len(serviceSlice) > 1 {
-			commonutil.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
+			commonutil.LoggerForReplica(job, rtype).Warningf("We have too many services for %s %d", rtype, index)
 		} else if len(serviceSlice) == 0 {
-			commonutil.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
+			commonutil.LoggerForReplica(job, rtype).Infof("need to create new service: %s-%d", rtype, index)
 			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
@@ -283,8 +278,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 	}
 
 	// Convert ReplicaType to lower string.
-	rt := strings.ToLower(string(rtype))
-	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rt)
+	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
 	err = jc.Expectations.ExpectCreations(expectationServicesKey, 1)
 	if err != nil {
 		return err
@@ -292,7 +286,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 
 	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
 	labels := jc.GenLabels(job.GetName())
-	labels[apiv1.ReplicaTypeLabel] = rt
+	labels[apiv1.ReplicaTypeLabel] = string(rtype)
 	labels[apiv1.ReplicaIndexLabel] = index
 
 	ports, err := jc.GetPortsFromJob(spec)
@@ -314,7 +308,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
-	service.Name = GenGeneralName(job.GetName(), rt, index)
+	service.Name = GenGeneralName(job.GetName(), rtype, index)
 	service.Labels = labels
 	// Create OwnerReference.
 	controllerRef := jc.GenOwnerReference(job)
