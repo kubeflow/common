@@ -81,6 +81,7 @@ ${CODEGEN_PKG}/generate-groups.sh "all" \
 # Notice: The code in code-generator does not generate defaulter by default.
 # We need to build binary from vendor cmd folder.
 echo "Building defaulter-gen"
+go get k8s.io/code-generator/cmd/defaulter-gen@v0.19.9
 go build -o ${GOPATH}/bin/defaulter-gen ${CODEGEN_PKG}/cmd/defaulter-gen
 
 echo "Generating defaulters for common/v1"
