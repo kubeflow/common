@@ -16,12 +16,13 @@ package common
 
 import (
 	"fmt"
+	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestGenGeneralName(t *testing.T) {
-	testRType := "worker"
+	var testRType apiv1.ReplicaType = "worker"
 	testIndex := "1"
 	testKey := "1/2/3/4/5"
 	expectedName := fmt.Sprintf("1-2-3-4-5-%s-%s", testRType, testIndex)

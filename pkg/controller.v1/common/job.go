@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -368,8 +367,7 @@ func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPo
 			continue
 		}
 		// Convert ReplicaType to lower string.
-		rt := strings.ToLower(string(rtype))
-		pods, err := jc.FilterPodsForReplicaType(pods, rt)
+		pods, err := jc.FilterPodsForReplicaType(pods, rtype)
 		if err != nil {
 			return false, err
 		}

@@ -16,10 +16,6 @@ package common
 
 import (
 	"fmt"
-	"reflect"
-	"strconv"
-	"strings"
-
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
+	"reflect"
+	"strconv"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	commonutil "github.com/kubeflow/common/pkg/util"
@@ -104,7 +102,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 		}
 
 		rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, apiv1.ReplicaType(rtype))
 
 		jc.Expectations.CreationObserved(expectationPodsKey)
 		// TODO: we may need add backoff here
@@ -205,7 +203,7 @@ func (jc *JobController) DeletePod(obj interface{}) {
 	}
 
 	rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, apiv1.ReplicaType(rtype))
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
 	deletedPodsCount.Inc()
@@ -254,14 +252,14 @@ func (jc *JobController) GetPodsForJob(jobObject interface{}) ([]*v1.Pod, error)
 }
 
 // FilterPodsForReplicaType returns pods belong to a replicaType.
-func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
+func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error) {
 	var result []*v1.Pod
 
 	replicaSelector := &metav1.LabelSelector{
 		MatchLabels: make(map[string]string),
 	}
 
-	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = replicaType
+	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = string(replicaType)
 
 	for _, pod := range pods {
 		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
@@ -337,10 +335,9 @@ func (jc *JobController) ReconcilePods(
 	}
 
 	// Convert ReplicaType to lower string.
-	rt := strings.ToLower(string(rtype))
-	logger := commonutil.LoggerForReplica(metaObject, rt)
+	logger := commonutil.LoggerForReplica(metaObject, rtype)
 	// Get all pods for the type rt.
-	pods, err := jc.FilterPodsForReplicaType(pods, rt)
+	pods, err := jc.FilterPodsForReplicaType(pods, rtype)
 	if err != nil {
 		return err
 	}
@@ -358,13 +355,13 @@ func (jc *JobController) ReconcilePods(
 	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {
-			logger.Warningf("We have too many pods for %s %d", rt, index)
+			logger.Warningf("We have too many pods for %s %d", rtype, index)
 		} else if len(podSlice) == 0 {
-			logger.Infof("Need to create new pod: %s-%d", rt, index)
+			logger.Infof("Need to create new pod: %s-%d", rtype, index)
 
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
-			err = jc.createNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
+			err = jc.createNewPod(job, rtype, strconv.Itoa(index), spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -408,7 +405,7 @@ func (jc *JobController) ReconcilePods(
 }
 
 // createNewPod creates a new pod for the given index and type.
-func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *apiv1.ReplicaSpec, masterRole bool,
+func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, index string, spec *apiv1.ReplicaSpec, masterRole bool,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
@@ -433,7 +430,7 @@ func (jc *JobController) createNewPod(job interface{}, rt, index string, spec *a
 
 	// Set type and index for the worker.
 	labels := jc.GenLabels(metaObject.GetName())
-	labels[apiv1.ReplicaTypeLabel] = rt
+	labels[apiv1.ReplicaTypeLabel] = string(rt)
 	labels[apiv1.ReplicaIndexLabel] = index
 
 	if masterRole {
