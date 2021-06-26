@@ -190,7 +190,7 @@ func TestCleanupJobIfTTL(T *testing.T) {
 	}
 
 	var job interface{}
-	err := mainJobController.cleanupJobIfTTL(&runPolicy, jobStatus, job)
+	err := mainJobController.CleanupJob(&runPolicy, jobStatus, job)
 	if assert.NoError(T, err) {
 		// job field is zeroed
 		assert.Empty(T, testJobController.Job)
