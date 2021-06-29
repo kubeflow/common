@@ -45,32 +45,6 @@ func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 	return nil
 }
 
-func (jc *JobController) cleanupJobIfTTL(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
-	currentTime := time.Now()
-	metaObject, _ := job.(metav1.Object)
-	ttl := runPolicy.TTLSecondsAfterFinished
-	if ttl == nil {
-		// do nothing if the cleanup delay is not set
-		return nil
-	}
-	duration := time.Second * time.Duration(*ttl)
-	if currentTime.After(jobStatus.CompletionTime.Add(duration)) {
-		err := jc.Controller.DeleteJob(job)
-		if err != nil {
-			commonutil.LoggerForJob(metaObject).Warnf("Cleanup Job error: %v.", err)
-			return err
-		}
-		return nil
-	}
-	key, err := KeyFunc(job)
-	if err != nil {
-		commonutil.LoggerForJob(metaObject).Warnf("Couldn't get key for job object: %v", err)
-		return err
-	}
-	jc.WorkQueue.AddRateLimited(key)
-	return nil
-}
-
 // recordAbnormalPods records the active pod whose latest condition is not in True status.
 func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime.Object) {
 	for _, pod := range activePods {
@@ -401,21 +375,29 @@ func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 		return nil
 	}
 	duration := time.Second * time.Duration(*ttl)
-	if currentTime.After(jobStatus.CompletionTime.Add(duration)) {
+	// todo: Is the jobStatus.CompletionTime maybe nil ?
+	finishTime := jobStatus.CompletionTime
+	expireTime := finishTime.Add(duration)
+	if currentTime.After(expireTime) {
 		err := jc.Controller.DeleteJob(job)
 		if err != nil {
 			commonutil.LoggerForJob(metaObject).Warnf("Cleanup Job error: %v.", err)
 			return err
 		}
 		return nil
+	} else {
+		if finishTime.After(currentTime) {
+			commonutil.LoggerForJob(metaObject).Warnf("Found Job finished in the future. This is likely due to time skew in the cluster. Job cleanup will be deferred.")
+		}
+		remaining := expireTime.Sub(currentTime)
+		key, err := KeyFunc(job)
+		if err != nil {
+			commonutil.LoggerForJob(metaObject).Warnf("Couldn't get key for job object: %v", err)
+			return err
+		}
+		jc.WorkQueue.AddAfter(key, remaining)
+		return nil
 	}
-	key, err := KeyFunc(job)
-	if err != nil {
-		commonutil.LoggerForJob(metaObject).Warnf("Couldn't get key for job object: %v", err)
-		return err
-	}
-	jc.WorkQueue.AddRateLimited(key)
-	return nil
 }
 
 func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) *v1.ResourceList {
