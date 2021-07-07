@@ -15,10 +15,13 @@ package common
 
 import (
 	"fmt"
+	"strconv"
+
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	commonutil "github.com/kubeflow/common/pkg/util"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
@@ -28,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"strconv"
 )
 
 var (
@@ -277,13 +279,6 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		return err
 	}
 
-	// Convert ReplicaType to lower string.
-	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
-	err = jc.Expectations.ExpectCreations(expectationServicesKey, 1)
-	if err != nil {
-		return err
-	}
-
 	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
 	labels := jc.GenLabels(job.GetName())
 	labels[apiv1.ReplicaTypeLabel] = string(rtype)
@@ -313,6 +308,10 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 	// Create OwnerReference.
 	controllerRef := jc.GenOwnerReference(job)
 
+	// Creation is expected when there is no error returned
+	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
+	jc.Expectations.RaiseExpectations(expectationServicesKey, 1, 0)
+
 	err = jc.ServiceControl.CreateServicesWithControllerRef(job.GetNamespace(), service, job.(runtime.Object), controllerRef)
 	if err != nil && errors.IsTimeout(err) {
 		// Service is created but its initialization has timed out.
@@ -325,6 +324,10 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		succeededServiceCreationCount.Inc()
 		return nil
 	} else if err != nil {
+		// Since error occurred(the informer won't observe this service),
+		// we decrement the expected number of creates
+		// and wait until next reconciliation
+		jc.Expectations.CreationObserved(expectationServicesKey)
 		failedServiceCreationCount.Inc()
 		return err
 	}
