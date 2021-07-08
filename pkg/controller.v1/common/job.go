@@ -7,8 +7,10 @@ import (
 	"time"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	"github.com/kubeflow/common/pkg/util/k8sutil"
+
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,8 +116,14 @@ func (jc *JobController) ReconcileJobs(
 		utilruntime.HandleError(fmt.Errorf("Couldn't get key for job object %#v: %v", job, err))
 		return err
 	}
-	log.Infof("Reconciling for job %s", metaObject.GetName())
+	// Reset expectations
+	// 1. Since `ReconcileJobs` is called, we expect that previous expectations are all satisfied,
+	//    and it's safe to reset the expectations
+	// 2. Reset expectations can avoid dirty data such as `expectedDeletion = -1`
+	//    (pod or service was deleted unexpectedly)
+	jc.ResetExpectations(jobKey, replicas)
 
+	log.Infof("Reconciling for job %s", metaObject.GetName())
 	pods, err := jc.Controller.GetPodsForJob(job)
 	if err != nil {
 		log.Warnf("GetPodsForJob error %v", err)
@@ -313,6 +321,16 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	}
 	return nil
+}
+
+// ResetExpectations reset the expectation for creates and deletes of pod/service to zero.
+func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec)  {
+	for rtype := range replicas {
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
+		jc.Expectations.SetExpectations(expectationPodsKey, 0, 0)
+		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
+		jc.Expectations.SetExpectations(expectationServicesKey, 0, 0)
+	}
 }
 
 // PastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.

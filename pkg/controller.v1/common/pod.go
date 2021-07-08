@@ -16,8 +16,15 @@ package common
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+
+	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
+	commonutil "github.com/kubeflow/common/pkg/util"
+	trainutil "github.com/kubeflow/common/pkg/util/train"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
@@ -28,12 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
-	"strconv"
-
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	commonutil "github.com/kubeflow/common/pkg/util"
-	trainutil "github.com/kubeflow/common/pkg/util/train"
 )
 
 const (
@@ -333,11 +334,17 @@ func (jc *JobController) ReconcilePods(
 	if !ok {
 		return fmt.Errorf("job is not a runtime.Object type")
 	}
+	jobKey, err := KeyFunc(metaObject)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
+		return err
+	}
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 
 	// Convert ReplicaType to lower string.
 	logger := commonutil.LoggerForReplica(metaObject, rtype)
 	// Get all pods for the type rt.
-	pods, err := jc.FilterPodsForReplicaType(pods, rtype)
+	pods, err = jc.FilterPodsForReplicaType(pods, rtype)
 	if err != nil {
 		return err
 	}
@@ -375,6 +382,8 @@ func (jc *JobController) ReconcilePods(
 				if err != nil {
 					return err
 				}
+				// Deletion is expected
+				jc.Expectations.RaiseExpectations(expectationPodsKey, 0, 1)
 			}
 
 			// Get the exit code of the container.
@@ -395,6 +404,8 @@ func (jc *JobController) ReconcilePods(
 					if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject); err != nil {
 						return err
 					}
+					// Deletion is expected
+					jc.Expectations.RaiseExpectations(expectationPodsKey, 0, 1)
 				}
 			}
 
@@ -419,11 +430,6 @@ func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, ind
 	jobKey, err := KeyFunc(metaObject)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
-		return err
-	}
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
-	err = jc.Expectations.ExpectCreations(expectationPodsKey, 1)
-	if err != nil {
 		return err
 	}
 	logger := commonutil.LoggerForReplica(metaObject, rt)
@@ -484,6 +490,11 @@ func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, ind
 		}
 	}
 
+	// Creation is expected when there is no error returned
+	// We use `RaiseExpectations` here to accumulate expectations since `SetExpectations` has no such kind of ability
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
+	jc.Expectations.RaiseExpectations(expectationPodsKey, 1, 0)
+
 	controllerRef := jc.GenOwnerReference(metaObject)
 	err = jc.PodControl.CreatePodsWithControllerRef(metaObject.GetNamespace(), podTemplate, runtimeObject, controllerRef)
 	if err != nil && errors.IsTimeout(err) {
@@ -496,6 +507,10 @@ func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, ind
 		// pod when the expectation expires.
 		return nil
 	} else if err != nil {
+		// Since error occurred(the informer won't observe this pod),
+		// we decrement the expected number of creates
+		// and wait until next reconciliation
+		jc.Expectations.CreationObserved(expectationPodsKey)
 		return err
 	}
 	createdPodsCount.Inc()
