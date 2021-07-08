@@ -288,9 +288,25 @@ func (jc *JobController) ReconcileJobs(
 				MinResources:      minResources,
 			}
 
-			_, err := jc.SyncPodGroup(metaObject, pgSpec)
+			syncReplicas := true
+			pg, err := jc.SyncPodGroup(metaObject, pgSpec)
 			if err != nil {
 				log.Warnf("Sync PodGroup %v: %v", jobKey, err)
+				syncReplicas = false
+			}
+
+			// Delay pods creation until podgroup status is inqueue
+			if pg == nil || pg.Status.Phase == "" || pg.Status.Phase == v1beta1.PodGroupPending {
+				log.Warnf("PodGroup %v unschedulable", jobKey)
+				syncReplicas = false
+			}
+
+			if !syncReplicas {
+				now := metav1.Now()
+				jobStatus.LastReconcileTime = &now
+
+				// Update job status here to trigger a new reconciliation
+				return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 			}
 		}
 
