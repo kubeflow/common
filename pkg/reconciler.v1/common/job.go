@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/kubeflow/common/pkg/core"
+
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	"github.com/kubeflow/common/pkg/util/k8sutil"
@@ -156,7 +158,7 @@ func (r *KubeflowReconciler) ReconcileJob(
 	}
 
 	if r.GangSchedulingEnabled() {
-		err = r.ReconcileGangResources(job, runPolicy, replicas, status)
+		err = r.ReconcileGangResource(ctx, job, runPolicy, replicas, r.GenOwnerReference(job))
 		if err != nil {
 			logrus.Warnf(ErrReconcileGangTemplate, err)
 			return err
@@ -164,7 +166,7 @@ func (r *KubeflowReconciler) ReconcileJob(
 	}
 
 	for rtype, spec := range replicas {
-		InitializeReplicaStatuses(status, rtype)
+		core.InitializeReplicaStatuses(status, rtype)
 
 		err = r.ReconcilePods(job, status, pods, rtype, spec, replicas)
 		if err != nil {
@@ -190,6 +192,10 @@ func (r *KubeflowReconciler) ReconcileJob(
 	}
 
 	return nil
+}
+
+func (r *KubeflowReconciler) RecordAbnormalPods(activePods []*corev1.Pod, object client.Object) {
+	core.RecordAbnormalPods(activePods, object, r.recorder)
 }
 
 func (r *KubeflowReconciler) GetReconcilerName() string {
@@ -310,11 +316,7 @@ func (r *KubeflowReconciler) CleanupResources(runPolicy *commonv1.RunPolicy, sta
 	ctx := context.Background()
 	cleanRunningPod := *runPolicy.CleanPodPolicy == commonv1.CleanPodPolicyRunning
 
-	gangs, err := r.GetGangResourcesForJob(ctx, job)
-	if err != nil {
-		return err
-	}
-	if err = r.DeleteGangResources(ctx, gangs); err != nil {
+	if err := r.DeleteGangResource(ctx, job); err != nil {
 		return err
 	}
 
@@ -391,73 +393,12 @@ func (r *KubeflowReconciler) UpdateJobStatusInAPIServer(ctx context.Context, job
 	return r.Status().Update(ctx, job)
 }
 
-// InitializeReplicaStatuses initializes the ReplicaStatuses for replica.
-func InitializeReplicaStatuses(jobStatus *commonv1.JobStatus, rtype commonv1.ReplicaType) {
-	if jobStatus.ReplicaStatuses == nil {
-		jobStatus.ReplicaStatuses = make(map[commonv1.ReplicaType]*commonv1.ReplicaStatus)
-	}
-
-	jobStatus.ReplicaStatuses[rtype] = &commonv1.ReplicaStatus{}
-}
-
-// UpdateJobReplicaStatuses updates the JobReplicaStatuses according to the pod.
-func UpdateJobReplicaStatuses(jobStatus *commonv1.JobStatus, rtype commonv1.ReplicaType, pod *corev1.Pod) {
-	switch pod.Status.Phase {
-	case corev1.PodRunning:
-		jobStatus.ReplicaStatuses[rtype].Active++
-	case corev1.PodSucceeded:
-		jobStatus.ReplicaStatuses[rtype].Succeeded++
-	case corev1.PodFailed:
-		jobStatus.ReplicaStatuses[rtype].Failed++
-	}
-}
-
 func (r *KubeflowReconciler) PastBackoffLimit(jobName string, runPolicy *commonv1.RunPolicy,
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, pods []*corev1.Pod) (bool, error) {
-	if runPolicy.BackoffLimit == nil {
-		return false, nil
-	}
-	result := int32(0)
-	for rtype, spec := range replicas {
-		if spec.RestartPolicy != commonv1.RestartPolicyOnFailure && spec.RestartPolicy != commonv1.RestartPolicyAlways {
-			logrus.Warnf(WarnNotCountedInBackoffLimit, rtype, jobName)
-			continue
-		}
-		// Convert ReplicaType to lower string.
-		podsForThisType, err := r.FilterPodsForReplicaType(pods, rtype)
-		if err != nil {
-			return false, err
-		}
-		for i := range podsForThisType {
-			po := podsForThisType[i]
-			if po.Status.Phase != corev1.PodRunning {
-				continue
-			}
-			for j := range po.Status.InitContainerStatuses {
-				stat := po.Status.InitContainerStatuses[j]
-				result += stat.RestartCount
-			}
-			for j := range po.Status.ContainerStatuses {
-				stat := po.Status.ContainerStatuses[j]
-				result += stat.RestartCount
-			}
-		}
-	}
-
-	if *runPolicy.BackoffLimit == 0 {
-		return result > 0, nil
-	}
-	return result >= *runPolicy.BackoffLimit, nil
+	return core.PastBackoffLimit(jobName, runPolicy, replicas, pods, r.FilterPodsForReplicaType)
 }
 
 // PastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
 func (r *KubeflowReconciler) PastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus *commonv1.JobStatus) bool {
-	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil {
-		return false
-	}
-	now := metav1.Now()
-	start := jobStatus.StartTime.Time
-	duration := now.Time.Sub(start)
-	allowedDuration := time.Duration(*runPolicy.ActiveDeadlineSeconds) * time.Second
-	return duration >= allowedDuration
+	return core.PastActiveDeadline(runPolicy, *jobStatus)
 }

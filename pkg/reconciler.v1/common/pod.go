@@ -2,8 +2,9 @@ package common
 
 import (
 	"context"
-	"sort"
 	"strconv"
+
+	"github.com/kubeflow/common/pkg/core"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	commonutil "github.com/kubeflow/common/pkg/util"
@@ -13,8 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -55,7 +54,7 @@ func (r *KubeflowReconciler) ReconcilePods(
 	numReplicas := int(*spec.Replicas)
 	var masterRole bool
 
-	InitializeReplicaStatuses(jobStatus, rtype)
+	core.InitializeReplicaStatuses(jobStatus, rtype)
 
 	// GetPodSlices will return enough information here to make decision to add/remove/update resources.
 	//
@@ -82,7 +81,7 @@ func (r *KubeflowReconciler) ReconcilePods(
 
 			// check if the index is in the valid range, if not, we should kill the pod
 			if index < 0 || index >= numReplicas {
-				err = r.DeletePod(pod.Namespace, pod.Name, job)
+				err = r.DeletePod(pod.Namespace, pod.Name)
 				if err != nil {
 					return err
 				}
@@ -103,13 +102,13 @@ func (r *KubeflowReconciler) ReconcilePods(
 				if pod.Status.Phase == corev1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
 					failedPodsCount.Inc()
 					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
-					if err = r.DeletePod(pod.Namespace, pod.Name, job); err != nil {
+					if err = r.DeletePod(pod.Namespace, pod.Name); err != nil {
 						return err
 					}
 				}
 			}
 
-			UpdateJobReplicaStatuses(jobStatus, rtype, pod)
+			core.UpdateJobReplicaStatuses(jobStatus, rtype, pod)
 		}
 	}
 	return nil
@@ -121,11 +120,11 @@ func (r *KubeflowReconciler) CreateNewPod(job client.Object, rt commonv1.Replica
 
 	logger := commonutil.LoggerForReplica(job, rt)
 
-	labels := r.GenLabels(job.GetName())
-	labels[commonv1.ReplicaTypeLabel] = string(rt)
-	labels[commonv1.ReplicaIndexLabel] = index
+	podLabels := r.GenLabels(job.GetName())
+	podLabels[commonv1.ReplicaTypeLabel] = string(rt)
+	podLabels[commonv1.ReplicaIndexLabel] = index
 	if masterRole {
-		labels[commonv1.JobRoleLabel] = "master"
+		podLabels[commonv1.JobRoleLabel] = "master"
 	}
 
 	podTemplate := spec.Template.DeepCopy()
@@ -135,7 +134,7 @@ func (r *KubeflowReconciler) CreateNewPod(job client.Object, rt commonv1.Replica
 		podTemplate.Labels = make(map[string]string)
 	}
 
-	for key, value := range labels {
+	for key, value := range podLabels {
 		podTemplate.Labels[key] = value
 	}
 
@@ -178,7 +177,7 @@ func (r *KubeflowReconciler) CreateNewPod(job client.Object, rt commonv1.Replica
 }
 
 func (r *KubeflowReconciler) GenPodName(jobName string, rtype commonv1.ReplicaType, index string) string {
-	return GenGeneralName(jobName, rtype, index)
+	return core.GenGeneralName(jobName, rtype, index)
 }
 
 func (r *KubeflowReconciler) GetDefaultContainerName() string {
@@ -186,52 +185,10 @@ func (r *KubeflowReconciler) GetDefaultContainerName() string {
 }
 
 func (r *KubeflowReconciler) GetPodSlices(pods []*corev1.Pod, replicas int, logger *log.Entry) [][]*corev1.Pod {
-	podSlices := make([][]*corev1.Pod, calculatePodSliceSize(pods, replicas))
-	for _, pod := range pods {
-		if _, ok := pod.Labels[commonv1.ReplicaIndexLabel]; !ok {
-			logger.Warning("The pod do not have the index label.")
-			continue
-		}
-		index, err := strconv.Atoi(pod.Labels[commonv1.ReplicaIndexLabel])
-		if err != nil {
-			logger.Warningf("Error when strconv.Atoi: %v", err)
-			continue
-		}
-		if index < 0 || index >= replicas {
-			logger.Warningf("The label index is not expected: %d, pod: %s/%s", index, pod.Namespace, pod.Name)
-		}
-
-		podSlices[index] = append(podSlices[index], pod)
-	}
-	return podSlices
+	return core.GetPodSlices(pods, replicas, logger)
 }
 
-func MaxInt(x, y int) int {
-	if x < y {
-		return y
-	}
-	return x
-}
-
-// calculatePodSliceSize compare max pod index with desired replicas and return larger size
-func calculatePodSliceSize(pods []*corev1.Pod, replicas int) int {
-	size := 0
-	for _, pod := range pods {
-		if _, ok := pod.Labels[commonv1.ReplicaIndexLabel]; !ok {
-			continue
-		}
-		index, err := strconv.Atoi(pod.Labels[commonv1.ReplicaIndexLabel])
-		if err != nil {
-			continue
-		}
-		size = MaxInt(size, index)
-	}
-
-	// size comes from index, need to +1 to indicate real size
-	return MaxInt(size+1, replicas)
-}
-
-func (r *KubeflowReconciler) DeletePod(ns string, name string, job client.Object) error {
+func (r *KubeflowReconciler) DeletePod(ns string, name string) error {
 	pod := &corev1.Pod{}
 	pod.Name = name
 	pod.Namespace = ns
@@ -273,70 +230,6 @@ func (r *KubeflowReconciler) GetPodsForJob(ctx context.Context, job client.Objec
 	//return cm.ClaimPods(pods)
 }
 
-func (r *KubeflowReconciler) RecordAbnormalPods(activePods []*corev1.Pod, object client.Object) {
-	for _, pod := range activePods {
-		// If the pod starts running, should checks the container statuses rather than the conditions.
-		recordContainerStatus := func(status *corev1.ContainerStatus) {
-			if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
-				terminated := status.State.Terminated
-				r.recorder.Eventf(object, corev1.EventTypeWarning, terminated.Reason,
-					"Error pod %s container %s exitCode: %d terminated message: %s",
-					pod.Name, status.Name, terminated.ExitCode, terminated.Message)
-			}
-			// The terminated state and waiting state don't simultaneously exists, checks them at the same time.
-			if status.State.Waiting != nil && status.State.Waiting.Message != "" {
-				wait := status.State.Waiting
-				r.recorder.Eventf(object, corev1.EventTypeWarning, wait.Reason,
-					"Error pod %s container %s waiting message: %s", pod.Name, status.Name, wait.Message)
-			}
-		}
-		if len(pod.Status.ContainerStatuses) != 0 {
-			for _, status := range pod.Status.ContainerStatuses {
-				recordContainerStatus(&status)
-			}
-			// If the pod has container status info, that means the init container statuses are normal.
-			continue
-		}
-		if len(pod.Status.InitContainerStatuses) != 0 {
-			for _, status := range pod.Status.InitContainerStatuses {
-				recordContainerStatus(&status)
-			}
-			continue
-		}
-		if len(pod.Status.Conditions) == 0 {
-			continue
-		}
-		// Should not modify the original pod which is stored in the informer cache.
-		status := pod.Status.DeepCopy()
-		sort.Slice(status.Conditions, func(i, j int) bool {
-			return status.Conditions[i].LastTransitionTime.After(status.Conditions[j].LastTransitionTime.Time)
-		})
-		condition := status.Conditions[0]
-		if condition.Status == corev1.ConditionTrue {
-			continue
-		}
-		r.recorder.Eventf(object, corev1.EventTypeWarning, condition.Reason, "Error pod %s condition message: %s", pod.Name, condition.Message)
-	}
-}
-
 func (r *KubeflowReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType commonv1.ReplicaType) ([]*corev1.Pod, error) {
-	var result []*corev1.Pod
-
-	replicaSelector := &metav1.LabelSelector{
-		MatchLabels: make(map[string]string),
-	}
-
-	replicaSelector.MatchLabels[commonv1.ReplicaTypeLabel] = string(replicaType)
-
-	for _, pod := range pods {
-		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
-		if err != nil {
-			return nil, err
-		}
-		if !selector.Matches(labels.Set(pod.Labels)) {
-			continue
-		}
-		result = append(result, pod)
-	}
-	return result, nil
+	return core.FilterPodsForReplicaType(pods, replicaType)
 }

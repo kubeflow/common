@@ -17,6 +17,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+type KubeflowReconcilerConfig struct {
+	// Enable gang scheduling by volcano
+	EnableGangScheduling bool
+}
+
+func NewDefaultKubeflowReconcilerConfig() *KubeflowReconcilerConfig {
+	return &KubeflowReconcilerConfig{EnableGangScheduling: true}
+}
+
 // KubeflowReconciler reconciles a KubeflowJob object
 type KubeflowReconciler struct {
 	KubeflowReconcilerInterface
@@ -26,6 +35,7 @@ type KubeflowReconciler struct {
 	Log       logr.Logger
 	recorder  record.EventRecorder
 	counter   *commonutil.Counter
+	Config    *KubeflowReconcilerConfig
 }
 
 func NewKubeflowReconciler(mgr manager.Manager) *KubeflowReconciler {
@@ -36,6 +46,7 @@ func NewKubeflowReconciler(mgr manager.Manager) *KubeflowReconciler {
 		Log:       log.Log,
 		recorder:  mgr.GetEventRecorderFor(ReconcilerName),
 		counter:   commonutil.NewCounter(),
+		Config:    NewDefaultKubeflowReconcilerConfig(),
 	}
 }
 

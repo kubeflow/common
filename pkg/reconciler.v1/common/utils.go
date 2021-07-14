@@ -30,8 +30,3 @@ func (r *KubeflowReconciler) GenLabels(jobName string) map[string]string {
 		labelJobName:   strings.Replace(jobName, "/", "-", -1),
 	}
 }
-
-func GenGeneralName(jobName string, rtype commonv1.ReplicaType, index string) string {
-	n := jobName + "-" + string(rtype) + "-" + index
-	return strings.Replace(n, "/", "-", -1)
-}
