@@ -15,21 +15,39 @@
 package common
 
 import (
-	"fmt"
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 )
 
 func TestGenGeneralName(t *testing.T) {
-	var testRType apiv1.ReplicaType = "worker"
-	testIndex := "1"
-	testKey := "1/2/3/4/5"
-	expectedName := fmt.Sprintf("1-2-3-4-5-%s-%s", testRType, testIndex)
+	tcs := []struct {
+		index        string
+		key          string
+		replicaType  apiv1.ReplicaType
+		expectedName string
+	}{
+		{
+			index:        "1",
+			key:          "1/2/3/4/5",
+			replicaType:  "worker",
+			expectedName: "1-2-3-4-5-worker-1",
+		},
+		{
+			index:        "1",
+			key:          "1/2/3/4/5",
+			replicaType:  "WORKER",
+			expectedName: "1-2-3-4-5-worker-1",
+		},
+	}
 
-	name := GenGeneralName(testKey, testRType, testIndex)
-	if name != expectedName {
-		t.Errorf("Expected name %s, got %s", expectedName, name)
+	for _, tc := range tcs {
+		actual := GenGeneralName(tc.key, tc.replicaType, tc.index)
+		if actual != tc.expectedName {
+			t.Errorf("Expected name %s, got %s", tc.expectedName, actual)
+		}
 	}
 }
 
