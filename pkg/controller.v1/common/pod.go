@@ -85,7 +85,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
 
 		if job == nil {
-			if pod.Labels[apiv1.GroupNameLabel] == jc.Controller.GetGroupNameLabelValue() {
+			if pod.Labels[apiv1.GroupNameLabel] != jc.Controller.GetGroupNameLabelValue() {
 				logger.Info("This pod's job does not exist")
 			}
 			return
@@ -398,9 +398,9 @@ func (jc *JobController) ReconcilePods(
 			}
 			// Check if the pod is retryable.
 			if spec.RestartPolicy == apiv1.RestartPolicyExitCode {
-				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
+				if pod.Status.Phase == v1.PodFailed && !trainutil.IsRetryableExitCode(exitCode) {
 					failedPodsCount.Inc()
-					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
+					logger.Infof("Need to delete the pod: %v.%v", pod.Namespace, pod.Name)
 					if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject); err != nil {
 						return err
 					}
