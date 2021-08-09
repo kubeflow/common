@@ -23,6 +23,7 @@ import (
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	commonutil "github.com/kubeflow/common/pkg/util"
+	utillabels "github.com/kubeflow/common/pkg/util/labels"
 	trainutil "github.com/kubeflow/common/pkg/util/train"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -85,7 +86,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 		logger := commonutil.LoggerForPod(pod, jc.Controller.GetAPIGroupVersionKind().Kind)
 
 		if job == nil {
-			if pod.Labels[apiv1.GroupNameLabel] == jc.Controller.GetGroupNameLabelValue() {
+			if utillabels.HasKnownLabels(pod.Labels, jc.Controller.GetGroupNameLabelValue()) {
 				logger.Info("This pod's job does not exist")
 			}
 			return
@@ -97,13 +98,13 @@ func (jc *JobController) AddPod(obj interface{}) {
 			return
 		}
 
-		if _, ok := pod.Labels[apiv1.ReplicaTypeLabel]; !ok {
+		rType, err := utillabels.ReplicaType(pod.Labels)
+		if err != nil {
 			logger.Infof("This pod maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, apiv1.ReplicaType(rtype))
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rType)
 
 		jc.Expectations.CreationObserved(expectationPodsKey)
 		// TODO: we may need add backoff here
@@ -198,13 +199,13 @@ func (jc *JobController) DeletePod(obj interface{}) {
 		return
 	}
 
-	if _, ok := pod.Labels[apiv1.ReplicaTypeLabel]; !ok {
+	rType, err := utillabels.ReplicaType(pod.Labels)
+	if err != nil {
 		logger.Infof("This pod maybe not created by %v", jc.Controller.ControllerName())
 		return
 	}
 
-	rtype := pod.Labels[apiv1.ReplicaTypeLabel]
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, apiv1.ReplicaType(rtype))
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rType)
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
 	deletedPodsCount.Inc()
@@ -256,18 +257,18 @@ func (jc *JobController) GetPodsForJob(jobObject interface{}) ([]*v1.Pod, error)
 func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error) {
 	var result []*v1.Pod
 
-	replicaSelector := &metav1.LabelSelector{
-		MatchLabels: make(map[string]string),
-	}
+	selector := labels.SelectorFromValidatedSet(labels.Set{
+		apiv1.ReplicaIndexLabel: string(replicaType),
+	})
 
-	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = string(replicaType)
+	// TODO(#149): Remove deprecated selector.
+	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
+		apiv1.ReplicaTypeLabelDeprecated: string(replicaType),
+	})
 
 	for _, pod := range pods {
-		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
-		if err != nil {
-			return nil, err
-		}
-		if !selector.Matches(labels.Set(pod.Labels)) {
+		set := labels.Set(pod.Labels)
+		if !selector.Matches(set) && !deprecatedSelector.Matches(set) {
 			continue
 		}
 		result = append(result, pod)
@@ -280,13 +281,9 @@ func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType ap
 func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 	podSlices := make([][]*v1.Pod, calculatePodSliceSize(pods, replicas))
 	for _, pod := range pods {
-		if _, ok := pod.Labels[apiv1.ReplicaIndexLabel]; !ok {
-			logger.Warning("The pod do not have the index label.")
-			continue
-		}
-		index, err := strconv.Atoi(pod.Labels[apiv1.ReplicaIndexLabel])
+		index, err := utillabels.ReplicaIndex(pod.Labels)
 		if err != nil {
-			logger.Warningf("Error when strconv.Atoi: %v", err)
+			logger.Warningf("Error obtaining replica index from Pod %s/%s: %v", pod.Namespace, pod.Name, err)
 			continue
 		}
 		if index < 0 || index >= replicas {
@@ -302,10 +299,7 @@ func (jc *JobController) GetPodSlices(pods []*v1.Pod, replicas int, logger *log.
 func calculatePodSliceSize(pods []*v1.Pod, replicas int) int {
 	size := 0
 	for _, pod := range pods {
-		if _, ok := pod.Labels[apiv1.ReplicaIndexLabel]; !ok {
-			continue
-		}
-		index, err := strconv.Atoi(pod.Labels[apiv1.ReplicaIndexLabel])
+		index, err := utillabels.ReplicaIndex(pod.Labels)
 		if err != nil {
 			continue
 		}
@@ -368,7 +362,7 @@ func (jc *JobController) ReconcilePods(
 
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
-			err = jc.createNewPod(job, rtype, strconv.Itoa(index), spec, masterRole, replicas)
+			err = jc.createNewPod(job, rtype, index, spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -416,7 +410,7 @@ func (jc *JobController) ReconcilePods(
 }
 
 // createNewPod creates a new pod for the given index and type.
-func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, index string, spec *apiv1.ReplicaSpec, masterRole bool,
+func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, index int, spec *apiv1.ReplicaSpec, masterRole bool,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
@@ -436,17 +430,18 @@ func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, ind
 
 	// Set type and index for the worker.
 	labels := jc.GenLabels(metaObject.GetName())
-	labels[apiv1.ReplicaTypeLabel] = string(rt)
-	labels[apiv1.ReplicaIndexLabel] = index
+	utillabels.SetReplicaType(labels, rt)
+	utillabels.SetReplicaIndex(labels, index)
 
 	if masterRole {
-		labels[apiv1.JobRoleLabel] = "master"
+		utillabels.SetJobRole(labels, "master")
 	}
 
 	podTemplate := spec.Template.DeepCopy()
 
+	idxStr := strconv.Itoa(index)
 	// Set name for the template.
-	podTemplate.Name = GenGeneralName(metaObject.GetName(), rt, index)
+	podTemplate.Name = GenGeneralName(metaObject.GetName(), rt, idxStr)
 
 	if podTemplate.Labels == nil {
 		podTemplate.Labels = make(map[string]string)
@@ -456,7 +451,7 @@ func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, ind
 		podTemplate.Labels[key] = value
 	}
 
-	if err := jc.Controller.SetClusterSpec(job, podTemplate, rt, index); err != nil {
+	if err := jc.Controller.SetClusterSpec(job, podTemplate, rt, idxStr); err != nil {
 		return err
 	}
 

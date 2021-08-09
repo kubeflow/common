@@ -34,10 +34,6 @@ func (TestJobController) GetGroupNameLabelValue() string {
 	return v1.GroupName
 }
 
-func (TestJobController) GetJobRoleKey() string {
-	return commonv1.JobRoleLabel
-}
-
 func (TestJobController) GetDefaultContainerPortName() string {
 	return "default-port-name"
 }

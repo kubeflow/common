@@ -21,6 +21,7 @@ import (
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	commonutil "github.com/kubeflow/common/pkg/util"
+	utillabels "github.com/kubeflow/common/pkg/util/labels"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -66,13 +67,13 @@ func (jc *JobController) AddService(obj interface{}) {
 			return
 		}
 
-		if _, ok := service.Labels[apiv1.ReplicaTypeLabel]; !ok {
+		rType, err := utillabels.ReplicaType(service.Labels)
+		if err != nil {
 			log.Infof("This service maybe not created by %v", jc.Controller.ControllerName())
 			return
 		}
 
-		rtypeValue := service.Labels[apiv1.ReplicaTypeLabel]
-		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, apiv1.ReplicaType(rtypeValue))
+		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rType)
 
 		jc.Expectations.CreationObserved(expectationServicesKey)
 		// TODO: we may need add backoff here
@@ -140,18 +141,18 @@ func (jc *JobController) GetServicesForJob(jobObject interface{}) ([]*v1.Service
 func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType apiv1.ReplicaType) ([]*v1.Service, error) {
 	var result []*v1.Service
 
-	replicaSelector := &metav1.LabelSelector{
-		MatchLabels: make(map[string]string),
-	}
+	selector := labels.SelectorFromValidatedSet(labels.Set{
+		apiv1.ReplicaIndexLabel: string(replicaType),
+	})
 
-	replicaSelector.MatchLabels[apiv1.ReplicaTypeLabel] = string(replicaType)
+	// TODO(#149): Remove deprecated selector.
+	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
+		apiv1.ReplicaTypeLabelDeprecated: string(replicaType),
+	})
 
 	for _, service := range services {
-		selector, err := metav1.LabelSelectorAsSelector(replicaSelector)
-		if err != nil {
-			return nil, err
-		}
-		if !selector.Matches(labels.Set(service.Labels)) {
+		set := labels.Set(service.Labels)
+		if !selector.Matches(set) && !deprecatedSelector.Matches(set) {
 			continue
 		}
 		result = append(result, service)
@@ -159,19 +160,15 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 	return result, nil
 }
 
-// getServiceSlices returns a slice, which element is the slice of service.
+// GetServiceSlices returns a slice, which element is the slice of service.
 // Assume the return object is serviceSlices, then serviceSlices[i] is an
 // array of pointers to services corresponding to Services for replica i.
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
 	serviceSlices := make([][]*v1.Service, calculateServiceSliceSize(services, replicas))
 	for _, service := range services {
-		if _, ok := service.Labels[apiv1.ReplicaIndexLabel]; !ok {
-			logger.Warning("The service do not have the index label.")
-			continue
-		}
-		index, err := strconv.Atoi(service.Labels[apiv1.ReplicaIndexLabel])
+		index, err := utillabels.ReplicaIndex(service.Labels)
 		if err != nil {
-			logger.Warningf("Error when strconv.Atoi: %v", err)
+			logger.Warningf("Error obtaining index for service %s/%s: %v", service.Namespace, service.Name, err)
 			continue
 		}
 		if index < 0 || index >= replicas {
@@ -187,10 +184,7 @@ func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, 
 func calculateServiceSliceSize(services []*v1.Service, replicas int) int {
 	size := 0
 	for _, svc := range services {
-		if _, ok := svc.Labels[apiv1.ReplicaIndexLabel]; !ok {
-			continue
-		}
-		index, err := strconv.Atoi(svc.Labels[apiv1.ReplicaIndexLabel])
+		index, err := utillabels.ReplicaIndex(svc.Labels)
 		if err != nil {
 			continue
 		}
@@ -279,10 +273,10 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		return err
 	}
 
-	// Append ReplicaTypeLabel and ReplicaIndexLabel labels.
+	// Append ReplicaTypeLabelDeprecated and ReplicaIndexLabelDeprecated labels.
 	labels := jc.GenLabels(job.GetName())
-	labels[apiv1.ReplicaTypeLabel] = string(rtype)
-	labels[apiv1.ReplicaIndexLabel] = index
+	utillabels.SetReplicaType(labels, rtype)
+	utillabels.SetReplicaIndexStr(labels, index)
 
 	ports, err := jc.GetPortsFromJob(spec)
 	if err != nil {
