@@ -258,7 +258,7 @@ func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType ap
 	var result []*v1.Pod
 
 	selector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaIndexLabel: string(replicaType),
+		apiv1.ReplicaTypeLabel: string(replicaType),
 	})
 
 	// TODO(#149): Remove deprecated selector.

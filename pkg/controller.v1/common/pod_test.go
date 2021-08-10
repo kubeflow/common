@@ -146,3 +146,48 @@ func TestCalculatePodSliceSize(t *testing.T) {
 		assert.Equal(t, tc.expectedSize, result)
 	}
 }
+
+func TestFilterPodsForReplicaType(t *testing.T) {
+	pods := []*v1.Pod{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "a",
+				Labels: map[string]string{apiv1.ReplicaTypeLabel: "foo"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "b",
+				Labels: map[string]string{apiv1.ReplicaTypeLabel: "bar"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "c",
+				Labels: map[string]string{apiv1.ReplicaTypeLabelDeprecated: "foo"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "d",
+				Labels: map[string]string{apiv1.ReplicaTypeLabelDeprecated: "bar"},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "e",
+				Labels: map[string]string{
+					apiv1.ReplicaTypeLabel:           "foo",
+					apiv1.ReplicaTypeLabelDeprecated: "bar",
+				},
+			},
+		},
+	}
+	c := &JobController{}
+	got, err := c.FilterPodsForReplicaType(pods, "foo")
+	if err != nil {
+		t.Fatalf("FilterPodsForReplicaType returned error: %v", err)
+	}
+	want := []*v1.Pod{pods[0], pods[2], pods[4]}
+	assert.Equal(t, want, got)
+}
