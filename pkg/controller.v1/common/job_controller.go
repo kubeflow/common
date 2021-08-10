@@ -207,12 +207,13 @@ func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerRefer
 }
 
 func (jc *JobController) GenLabels(jobName string) map[string]string {
-	labelGroupName := apiv1.GroupNameLabel
-	labelJobName := apiv1.JobNameLabel
-	groupName := jc.Controller.GetGroupNameLabelValue()
+	jobName = strings.Replace(jobName, "/", "-", -1)
 	return map[string]string{
-		labelGroupName: groupName,
-		labelJobName:   strings.Replace(jobName, "/", "-", -1),
+		// TODO(#149): Remove deprecated labels.
+		apiv1.OperatorNameLabel:        jc.Controller.ControllerName(),
+		apiv1.GroupNameLabelDeprecated: jc.Controller.GetGroupNameLabelValue(),
+		apiv1.JobNameLabel:             jobName,
+		apiv1.JobNameLabelDeprecated:   jobName,
 	}
 }
 
@@ -247,8 +248,6 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, pgSpec v1beta1.PodGroup
 
 // SyncPdb will create a PDB for gang scheduling by volcano.
 func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*policyapi.PodDisruptionBudget, error) {
-	labelJobName := apiv1.JobNameLabel
-
 	// Check the pdb exist or not
 	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
 	if err == nil || !k8serrors.IsNotFound(err) {
@@ -271,7 +270,8 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 			MinAvailable: &minAvailable,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					labelJobName: job.GetName(),
+					// TODO(#149): Change for JobNameLabel after some releases.
+					apiv1.JobNameLabelDeprecated: job.GetName(),
 				},
 			},
 		},

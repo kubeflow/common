@@ -1,9 +1,10 @@
 package common
 
 import (
+	"testing"
+
 	v12 "github.com/kubeflow/common/test_job/test_util/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
