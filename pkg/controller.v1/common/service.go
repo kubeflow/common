@@ -142,7 +142,7 @@ func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, re
 	var result []*v1.Service
 
 	selector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaIndexLabel: string(replicaType),
+		apiv1.ReplicaTypeLabel: string(replicaType),
 	})
 
 	// TODO(#149): Remove deprecated selector.
