@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 	"reflect"
-	"sort"
 	"time"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
+	"github.com/kubeflow/common/pkg/core"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	"github.com/kubeflow/common/pkg/util/k8sutil"
 
@@ -49,49 +49,7 @@ func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 
 // recordAbnormalPods records the active pod whose latest condition is not in True status.
 func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime.Object) {
-	for _, pod := range activePods {
-		// If the pod starts running, should checks the container statuses rather than the conditions.
-		recordContainerStatus := func(status *v1.ContainerStatus) {
-			if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
-				terminated := status.State.Terminated
-				jc.Recorder.Eventf(object, v1.EventTypeWarning, terminated.Reason,
-					"Error pod %s container %s exitCode: %d terminated message: %s",
-					pod.Name, status.Name, terminated.ExitCode, terminated.Message)
-			}
-			// The terminated state and waiting state don't simultaneously exists, checks them at the same time.
-			if status.State.Waiting != nil && status.State.Waiting.Message != "" {
-				wait := status.State.Waiting
-				jc.Recorder.Eventf(object, v1.EventTypeWarning, wait.Reason,
-					"Error pod %s container %s waiting message: %s", pod.Name, status.Name, wait.Message)
-			}
-		}
-		if len(pod.Status.ContainerStatuses) != 0 {
-			for _, status := range pod.Status.ContainerStatuses {
-				recordContainerStatus(&status)
-			}
-			// If the pod has container status info, that means the init container statuses are normal.
-			continue
-		}
-		if len(pod.Status.InitContainerStatuses) != 0 {
-			for _, status := range pod.Status.InitContainerStatuses {
-				recordContainerStatus(&status)
-			}
-			continue
-		}
-		if len(pod.Status.Conditions) == 0 {
-			continue
-		}
-		// Should not modify the original pod which is stored in the informer cache.
-		status := pod.Status.DeepCopy()
-		sort.Slice(status.Conditions, func(i, j int) bool {
-			return status.Conditions[i].LastTransitionTime.After(status.Conditions[j].LastTransitionTime.Time)
-		})
-		condition := status.Conditions[0]
-		if condition.Status == v1.ConditionTrue {
-			continue
-		}
-		jc.Recorder.Eventf(object, v1.EventTypeWarning, condition.Reason, "Error pod %s condition message: %s", pod.Name, condition.Message)
-	}
+	core.RecordAbnormalPods(activePods, object, jc.Recorder)
 }
 
 // ReconcileJobs checks and updates replicas for each given ReplicaSpec.
@@ -340,7 +298,7 @@ func (jc *JobController) ReconcileJobs(
 }
 
 // ResetExpectations reset the expectation for creates and deletes of pod/service to zero.
-func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec)  {
+func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) {
 	for rtype := range replicas {
 		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 		jc.Expectations.SetExpectations(expectationPodsKey, 0, 0)
@@ -351,54 +309,14 @@ func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.Rep
 
 // PastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
 func (jc *JobController) PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) bool {
-	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil {
-		return false
-	}
-	now := metav1.Now()
-	start := jobStatus.StartTime.Time
-	duration := now.Time.Sub(start)
-	allowedDuration := time.Duration(*runPolicy.ActiveDeadlineSeconds) * time.Second
-	return duration >= allowedDuration
+	return core.PastActiveDeadline(runPolicy, jobStatus)
 }
 
 // PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
 // this method applies only to pods with restartPolicy == OnFailure or Always
 func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
-	if runPolicy.BackoffLimit == nil {
-		return false, nil
-	}
-	result := int32(0)
-	for rtype, spec := range replicas {
-		if spec.RestartPolicy != apiv1.RestartPolicyOnFailure && spec.RestartPolicy != apiv1.RestartPolicyAlways {
-			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure or Always. Not counted in backoff limit.", rtype, jobName)
-			continue
-		}
-		// Convert ReplicaType to lower string.
-		pods, err := jc.FilterPodsForReplicaType(pods, rtype)
-		if err != nil {
-			return false, err
-		}
-		for i := range pods {
-			po := pods[i]
-			if po.Status.Phase != v1.PodRunning {
-				continue
-			}
-			for j := range po.Status.InitContainerStatuses {
-				stat := po.Status.InitContainerStatuses[j]
-				result += stat.RestartCount
-			}
-			for j := range po.Status.ContainerStatuses {
-				stat := po.Status.ContainerStatuses[j]
-				result += stat.RestartCount
-			}
-		}
-	}
-
-	if *runPolicy.BackoffLimit == 0 {
-		return result > 0, nil
-	}
-	return result >= *runPolicy.BackoffLimit, nil
+	return core.PastBackoffLimit(jobName, runPolicy, replicas, pods, jc.FilterPodsForReplicaType)
 }
 
 func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus, job interface{}) error {
@@ -435,40 +353,5 @@ func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 }
 
 func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) *v1.ResourceList {
-	var replicasPriority ReplicasPriority
-	for t, replica := range replicas {
-		rp := ReplicaPriority{0, *replica}
-		pc := replica.Template.Spec.PriorityClassName
-
-		priorityClass, err := jc.PriorityClassLister.Get(pc)
-		if err != nil || priorityClass == nil {
-			log.Warnf("Ignore task %s priority class %s: %v", t, pc, err)
-		} else {
-			rp.priority = priorityClass.Value
-		}
-
-		replicasPriority = append(replicasPriority, rp)
-	}
-
-	sort.Sort(replicasPriority)
-
-	minAvailableTasksRes := v1.ResourceList{}
-	podCnt := int32(0)
-	for _, task := range replicasPriority {
-		if task.Replicas == nil {
-			continue
-		}
-
-		for i := int32(0); i < *task.Replicas; i++ {
-			if podCnt >= minMember {
-				break
-			}
-			podCnt++
-			for _, c := range task.Template.Spec.Containers {
-				AddResourceList(minAvailableTasksRes, c.Resources.Requests, c.Resources.Limits)
-			}
-		}
-	}
-
-	return &minAvailableTasksRes
+	return CalcPGMinResources(minMember, replicas, jc.PriorityClassLister.Get)
 }

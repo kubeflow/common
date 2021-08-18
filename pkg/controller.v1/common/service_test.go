@@ -3,6 +3,8 @@ package common
 import (
 	"testing"
 
+	"github.com/kubeflow/common/pkg/core"
+
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
@@ -74,7 +76,7 @@ func TestCalculateServiceSliceSize(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := calculateServiceSliceSize(tc.services, tc.replicas)
+		result := core.CalculateServiceSliceSize(tc.services, tc.replicas)
 		assert.Equal(t, tc.expectedSize, result)
 	}
 }
