@@ -3,13 +3,14 @@ package common
 import (
 	"testing"
 
-	v12 "github.com/kubeflow/common/test_job/test_util/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"github.com/kubeflow/common/pkg/core"
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	v12 "github.com/kubeflow/common/test_job/test_util/v1"
+
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestSetRestartPolicy(t *testing.T) {
@@ -59,7 +60,7 @@ func TestSetRestartPolicy(t *testing.T) {
 	for _, c := range testCase {
 		spec := c.testJob.Spec.TestReplicaSpecs[c.expectedType]
 		podTemplate := spec.Template
-		setRestartPolicy(&podTemplate, spec)
+		core.SetRestartPolicy(&podTemplate, spec)
 		if podTemplate.Spec.RestartPolicy != c.expectedRestartPolicy {
 			t.Errorf("Expected %s, got %s", c.expectedRestartPolicy, podTemplate.Spec.RestartPolicy)
 		}
@@ -142,7 +143,7 @@ func TestCalculatePodSliceSize(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := calculatePodSliceSize(tc.pods, tc.replicas)
+		result := core.CalculatePodSliceSize(tc.pods, tc.replicas)
 		assert.Equal(t, tc.expectedSize, result)
 	}
 }

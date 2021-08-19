@@ -20,6 +20,7 @@ import (
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
+	"github.com/kubeflow/common/pkg/core"
 	commonutil "github.com/kubeflow/common/pkg/util"
 	utillabels "github.com/kubeflow/common/pkg/util/labels"
 
@@ -139,60 +140,14 @@ func (jc *JobController) GetServicesForJob(jobObject interface{}) ([]*v1.Service
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
 func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType apiv1.ReplicaType) ([]*v1.Service, error) {
-	var result []*v1.Service
-
-	selector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabel: string(replicaType),
-	})
-
-	// TODO(#149): Remove deprecated selector.
-	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabelDeprecated: string(replicaType),
-	})
-
-	for _, service := range services {
-		set := labels.Set(service.Labels)
-		if !selector.Matches(set) && !deprecatedSelector.Matches(set) {
-			continue
-		}
-		result = append(result, service)
-	}
-	return result, nil
+	return core.FilterServicesForReplicaType(services, replicaType)
 }
 
 // GetServiceSlices returns a slice, which element is the slice of service.
 // Assume the return object is serviceSlices, then serviceSlices[i] is an
 // array of pointers to services corresponding to Services for replica i.
 func (jc *JobController) GetServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
-	serviceSlices := make([][]*v1.Service, calculateServiceSliceSize(services, replicas))
-	for _, service := range services {
-		index, err := utillabels.ReplicaIndex(service.Labels)
-		if err != nil {
-			logger.Warningf("Error obtaining index for service %s/%s: %v", service.Namespace, service.Name, err)
-			continue
-		}
-		if index < 0 || index >= replicas {
-			logger.Warningf("The label index is not expected: %d, service: %s/%s", index, service.Namespace, service.Name)
-		}
-
-		serviceSlices[index] = append(serviceSlices[index], service)
-	}
-	return serviceSlices
-}
-
-// calculateServiceSliceSize compare max pod index with desired replicas and return larger size
-func calculateServiceSliceSize(services []*v1.Service, replicas int) int {
-	size := 0
-	for _, svc := range services {
-		index, err := utillabels.ReplicaIndex(svc.Labels)
-		if err != nil {
-			continue
-		}
-		size = MaxInt(size, index)
-	}
-
-	// size comes from index, need to +1 to indicate real size
-	return MaxInt(size+1, replicas)
+	return core.GetServiceSlices(services, replicas, logger)
 }
 
 // reconcileServices checks and updates services for each given ReplicaSpec.
@@ -245,23 +200,7 @@ func (jc *JobController) ReconcileServices(
 
 // GetPortsFromJob gets the ports of job container. Port could be nil, if distributed communication strategy doesn't need and no other ports that need to be exposed.
 func (jc *JobController) GetPortsFromJob(spec *apiv1.ReplicaSpec) (map[string]int32, error) {
-	ports := make(map[string]int32)
-
-	containers := spec.Template.Spec.Containers
-	for _, container := range containers {
-		if container.Name == jc.Controller.GetDefaultContainerName() {
-			containerPorts := container.Ports
-			if len(containerPorts) == 0 {
-				return nil, nil
-			}
-			for _, port := range containerPorts {
-				ports[port.Name] = port.ContainerPort
-			}
-			return ports, nil
-		}
-	}
-
-	return nil, fmt.Errorf("failed to find the port")
+	return core.GetPortsFromJob(spec, jc.Controller.GetDefaultContainerName())
 }
 
 // createNewService creates a new service for the given index and type.

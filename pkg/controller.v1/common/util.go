@@ -16,10 +16,13 @@ package common
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/scheduling/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -98,4 +101,45 @@ func AddResourceList(list, req, limit v1.ResourceList) {
 			list[name] = value
 		}
 	}
+}
+
+type PriorityClassGetFunc func(string) (*v1beta1.PriorityClass, error)
+
+func CalcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pcGetFunc PriorityClassGetFunc) *v1.ResourceList {
+	var replicasPriority ReplicasPriority
+	for t, replica := range replicas {
+		rp := ReplicaPriority{0, *replica}
+		pc := replica.Template.Spec.PriorityClassName
+
+		priorityClass, err := pcGetFunc(pc)
+		if err != nil || priorityClass == nil {
+			log.Warnf("Ignore task %s priority class %s: %v", t, pc, err)
+		} else {
+			rp.priority = priorityClass.Value
+		}
+
+		replicasPriority = append(replicasPriority, rp)
+	}
+
+	sort.Sort(replicasPriority)
+
+	minAvailableTasksRes := v1.ResourceList{}
+	podCnt := int32(0)
+	for _, task := range replicasPriority {
+		if task.Replicas == nil {
+			continue
+		}
+
+		for i := int32(0); i < *task.Replicas; i++ {
+			if podCnt >= minMember {
+				break
+			}
+			podCnt++
+			for _, c := range task.Template.Spec.Containers {
+				AddResourceList(minAvailableTasksRes, c.Resources.Requests, c.Resources.Limits)
+			}
+		}
+	}
+
+	return &minAvailableTasksRes
 }
