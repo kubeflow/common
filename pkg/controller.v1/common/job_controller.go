@@ -11,7 +11,7 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	schedulinglisters "k8s.io/client-go/listers/scheduling/v1beta1"
+	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -105,17 +105,14 @@ type JobController struct {
 	// ServiceLister can list/get services from the shared informer's store.
 	ServiceLister corelisters.ServiceLister
 
-	// PriorityClassLister can list/get priorityClasses from the shared informer's store.
-	PriorityClassLister schedulinglisters.PriorityClassLister
+	// PriorityClassInterface can list/get priorityClasses from the shared informer's store.
+	PriorityClassInterface schedulingv1.PriorityClassInterface
 
 	// PodInformerSynced returns true if the pod store has been synced at least once.
 	PodInformerSynced cache.InformerSynced
 
 	// ServiceInformerSynced returns true if the service store has been synced at least once.
 	ServiceInformerSynced cache.InformerSynced
-
-	// PriorityClassInformerSynced returns true if the priority class store has been synced at least once.
-	PriorityClassInformerSynced cache.InformerSynced
 
 	// A TTLCache of pod/services creates/deletes each job expects to see
 	// We use Job namespace/name + ReplicaType + pods/services as an expectation key,

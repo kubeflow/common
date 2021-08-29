@@ -1,6 +1,7 @@
 package common
 
 import (
+	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 	"testing"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -14,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	schedulinglisters "k8s.io/client-go/listers/scheduling/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -89,7 +89,7 @@ func TestJobController_CreateNewService(t *testing.T) {
 		VolcanoClientSet            volcanoclient.Interface
 		PodLister                   corelisters.PodLister
 		ServiceLister               corelisters.ServiceLister
-		PriorityClassLister         schedulinglisters.PriorityClassLister
+		PriorityClassInterface      schedulingv1.PriorityClassInterface
 		PodInformerSynced           cache.InformerSynced
 		ServiceInformerSynced       cache.InformerSynced
 		PriorityClassInformerSynced cache.InformerSynced
@@ -186,21 +186,20 @@ func TestJobController_CreateNewService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jc := &JobController{
-				Controller:                  tt.fields.Controller,
-				Config:                      tt.fields.Config,
-				PodControl:                  tt.fields.PodControl,
-				ServiceControl:              tt.fields.ServiceControl,
-				KubeClientSet:               tt.fields.KubeClientSet,
-				VolcanoClientSet:            tt.fields.VolcanoClientSet,
-				PodLister:                   tt.fields.PodLister,
-				ServiceLister:               tt.fields.ServiceLister,
-				PriorityClassLister:         tt.fields.PriorityClassLister,
-				PodInformerSynced:           tt.fields.PodInformerSynced,
-				ServiceInformerSynced:       tt.fields.ServiceInformerSynced,
-				PriorityClassInformerSynced: tt.fields.PriorityClassInformerSynced,
-				Expectations:                tt.fields.Expectations,
-				WorkQueue:                   tt.fields.WorkQueue,
-				Recorder:                    tt.fields.Recorder,
+				Controller:             tt.fields.Controller,
+				Config:                 tt.fields.Config,
+				PodControl:             tt.fields.PodControl,
+				ServiceControl:         tt.fields.ServiceControl,
+				KubeClientSet:          tt.fields.KubeClientSet,
+				VolcanoClientSet:       tt.fields.VolcanoClientSet,
+				PodLister:              tt.fields.PodLister,
+				ServiceLister:          tt.fields.ServiceLister,
+				PriorityClassInterface: tt.fields.PriorityClassInterface,
+				PodInformerSynced:      tt.fields.PodInformerSynced,
+				ServiceInformerSynced:  tt.fields.ServiceInformerSynced,
+				Expectations:           tt.fields.Expectations,
+				WorkQueue:              tt.fields.WorkQueue,
+				Recorder:               tt.fields.Recorder,
 			}
 			if err := jc.CreateNewService(tt.args.job, tt.args.rtype, tt.args.spec, tt.args.index); (err != nil) != tt.wantErr {
 				t.Errorf("JobController.CreateNewService() error = %v, wantErr %v", err, tt.wantErr)

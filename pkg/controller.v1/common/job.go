@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -424,7 +425,7 @@ func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.
 		rp := ReplicaPriority{0, *replica}
 		pc := replica.Template.Spec.PriorityClassName
 
-		priorityClass, err := jc.PriorityClassLister.Get(pc)
+		priorityClass, err := jc.PriorityClassInterface.Get(context.Background(), pc, metav1.GetOptions{})
 		if err != nil || priorityClass == nil {
 			log.Warnf("Ignore task %s priority class %s: %v", t, pc, err)
 		} else {
