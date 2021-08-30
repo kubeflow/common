@@ -18,15 +18,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 )
 
 func TestGenGeneralName(t *testing.T) {
 	tcs := []struct {
 		index        string
 		key          string
-		replicaType  apiv1.ReplicaType
+		replicaType  string
 		expectedName string
 	}{
 		{
