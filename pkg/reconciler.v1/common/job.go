@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"time"
 
@@ -475,4 +476,24 @@ func (r *KubeflowJobReconciler) PastBackoffLimit(jobName string, runPolicy *comm
 // PastActiveDeadline checks if this KubeflowJob has ActiveDeadlineSeconds field set and if it is exceeded.
 func (r *KubeflowJobReconciler) PastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus *commonv1.JobStatus) bool {
 	return core.PastActiveDeadline(runPolicy, *jobStatus)
+}
+
+func (r *KubeflowJobReconciler) GetJob(ctx context.Context, req ctrl.Request) (client.Object, error) {
+	panic("implement me")
+}
+
+func (r *KubeflowJobReconciler) ExtractReplicasSpec(job client.Object) (map[commonv1.ReplicaType]*commonv1.ReplicaSpec, error) {
+	panic("implement me")
+}
+
+func (r *KubeflowJobReconciler) ExtractRunPolicy(job client.Object) (*commonv1.RunPolicy, error) {
+	panic("implement me")
+}
+
+func (r *KubeflowJobReconciler) ExtractJobStatus(job client.Object) (*commonv1.JobStatus, error) {
+	panic("implement me")
+}
+
+func (r *KubeflowJobReconciler) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool {
+	panic("implement me")
 }
