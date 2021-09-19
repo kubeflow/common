@@ -16,9 +16,8 @@ package labels
 
 import (
 	"errors"
-	"strconv"
-
 	v1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	"strconv"
 )
 
 // TODO(#149): Remove deprecated labels.
@@ -43,7 +42,7 @@ func SetReplicaIndexStr(labels map[string]string, idx string) {
 	labels[v1.ReplicaIndexLabelDeprecated] = idx
 }
 
-func ReplicaType(labels map[string]string) (v1.ReplicaType, error) {
+func ReplicaType(labels map[string]string) (string, error) {
 	v, ok := labels[v1.ReplicaTypeLabel]
 	if !ok {
 		v, ok = labels[v1.ReplicaTypeLabelDeprecated]
@@ -51,12 +50,12 @@ func ReplicaType(labels map[string]string) (v1.ReplicaType, error) {
 			return "", errors.New("replica type label not found")
 		}
 	}
-	return v1.ReplicaType(v), nil
+	return v, nil
 }
 
-func SetReplicaType(labels map[string]string, rt v1.ReplicaType) {
-	labels[v1.ReplicaTypeLabel] = string(rt)
-	labels[v1.ReplicaTypeLabelDeprecated] = string(rt)
+func SetReplicaType(labels map[string]string, rt string) {
+	labels[v1.ReplicaTypeLabel] = rt
+	labels[v1.ReplicaTypeLabelDeprecated] = rt
 }
 
 func HasKnownLabels(labels map[string]string, groupName string) bool {

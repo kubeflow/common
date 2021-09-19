@@ -2,8 +2,6 @@ package core
 
 import (
 	"strings"
-
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 )
 
 func MaxInt(x, y int) int {
@@ -13,7 +11,7 @@ func MaxInt(x, y int) int {
 	return x
 }
 
-func GenGeneralName(jobName string, rtype commonv1.ReplicaType, index string) string {
-	n := jobName + "-" + strings.ToLower(string(rtype)) + "-" + index
+func GenGeneralName(jobName string, rtype string, index string) string {
+	n := jobName + "-" + strings.ToLower(rtype) + "-" + index
 	return strings.Replace(n, "/", "-", -1)
 }

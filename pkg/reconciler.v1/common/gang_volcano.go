@@ -165,12 +165,12 @@ func (r *VolcanoReconciler) ReconcilePodGroup(
 }
 
 // DecoratePodForGangScheduling decorates the podTemplate before it's used to generate a pod with information for gang-scheduling
-func (r *VolcanoReconciler) DecoratePodForGangScheduling(rtype commonv1.ReplicaType, podTemplate *corev1.PodTemplateSpec, job client.Object) {
+func (r *VolcanoReconciler) DecoratePodForGangScheduling(rt string, podTemplate *corev1.PodTemplateSpec, job client.Object) {
 	if podTemplate.Spec.SchedulerName == "" || podTemplate.Spec.SchedulerName == r.GetGangSchedulerName() {
 		podTemplate.Spec.SchedulerName = r.GetGangSchedulerName()
 	} else {
 		warnMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
-		commonutil.LoggerForReplica(job, rtype).Warn(warnMsg)
+		commonutil.LoggerForReplica(job, rt).Warn(warnMsg)
 		r.GetRecorder().Event(job, corev1.EventTypeWarning, "PodTemplateSchedulerNameAlreadySet", warnMsg)
 	}
 

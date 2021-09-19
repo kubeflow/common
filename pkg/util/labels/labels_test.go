@@ -52,7 +52,7 @@ func TestReplicaIndex(t *testing.T) {
 func TestReplicaType(t *testing.T) {
 	cases := map[string]struct {
 		labels  map[string]string
-		want    v1.ReplicaType
+		want    string
 		wantErr bool
 	}{
 		"new": {

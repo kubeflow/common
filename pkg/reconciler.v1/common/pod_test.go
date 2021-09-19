@@ -15,6 +15,7 @@
 package common_test
 
 import (
+	"strings"
 	"testing"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -30,7 +31,7 @@ import (
 func TestGenPodName(t *testing.T) {
 	type tc struct {
 		testJob      *testjobv1.TestJob
-		testRType    commonv1.ReplicaType
+		testRType    string
 		testIndex    string
 		expectedName string
 	}
@@ -40,7 +41,7 @@ func TestGenPodName(t *testing.T) {
 			tj.SetName("hello-world")
 			return tc{
 				testJob:      tj,
-				testRType:    commonv1.ReplicaType(testjobv1.TestReplicaTypeWorker),
+				testRType:    strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
 				testIndex:    "1",
 				expectedName: "hello-world-worker-1",
 			}
@@ -70,7 +71,7 @@ func PodInSlice(pod *corev1.Pod, pods []*corev1.Pod) bool {
 func TestFilterPodsForReplicaType(t *testing.T) {
 	type tc struct {
 		testPods     []*corev1.Pod
-		testRType    commonv1.ReplicaType
+		testRType    string
 		expectedPods []*corev1.Pod
 	}
 	testCase := []tc{
@@ -83,7 +84,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 					Name:      "pod0",
 					Namespace: "default",
 					Labels: map[string]string{
-						commonv1.ReplicaTypeLabel: string(testjobv1.TestReplicaTypeMaster),
+						commonv1.ReplicaTypeLabel: strings.ToLower(string(testjobv1.TestReplicaTypeMaster)),
 					},
 				},
 				Spec:   corev1.PodSpec{},
@@ -95,7 +96,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 					Name:      "pod1",
 					Namespace: "default",
 					Labels: map[string]string{
-						commonv1.ReplicaTypeLabel: string(testjobv1.TestReplicaTypeWorker),
+						commonv1.ReplicaTypeLabel: strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
 					},
 				},
 				Spec:   corev1.PodSpec{},
@@ -107,7 +108,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 					Name:      "pod2",
 					Namespace: "default",
 					Labels: map[string]string{
-						commonv1.ReplicaTypeLabel: string(testjobv1.TestReplicaTypeWorker),
+						commonv1.ReplicaTypeLabel: strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
 					},
 				},
 				Spec:   corev1.PodSpec{},
@@ -119,7 +120,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 
 			return tc{
 				testPods:     allPods,
-				testRType:    commonv1.ReplicaType(testjobv1.TestReplicaTypeWorker),
+				testRType:    strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
 				expectedPods: filteredPods,
 			}
 		}(),

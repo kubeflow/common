@@ -17,6 +17,7 @@ package common
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -78,7 +79,7 @@ func BareKubeflowPodReconciler(client client.Client) *KubeflowPodReconciler {
 }
 
 // GenPodName returns the name of the Pod based on jobName, replicaType and its index
-func (r *KubeflowPodReconciler) GenPodName(jobName string, rtype commonv1.ReplicaType, index string) string {
+func (r *KubeflowPodReconciler) GenPodName(jobName string, rtype string, index string) string {
 	return core.GenGeneralName(jobName, rtype, index)
 }
 
@@ -110,7 +111,7 @@ func (r *KubeflowPodReconciler) GetPodSlices(pods []*corev1.Pod, replicas int, l
 }
 
 // FilterPodsForReplicaType filters out Pods for this replicaType
-func (r *KubeflowPodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType commonv1.ReplicaType) ([]*corev1.Pod, error) {
+func (r *KubeflowPodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType string) ([]*corev1.Pod, error) {
 	return core.FilterPodsForReplicaType(pods, replicaType)
 }
 
@@ -125,9 +126,10 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error {
 
 	// Convert ReplicaType to lower string.
-	logger := commonutil.LoggerForReplica(job, rtype)
+	rt := strings.ToLower(string(rtype))
+	logger := commonutil.LoggerForReplica(job, rt)
 	// Get all pods for the type rt.
-	pods, err := r.FilterPodsForReplicaType(pods, rtype)
+	pods, err := r.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
 	}
@@ -196,9 +198,11 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 }
 
 // CreateNewPod generate Pods for this job and submits creation request to APIServer
-func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rt commonv1.ReplicaType, index string,
+func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rtype commonv1.ReplicaType, index string,
 	spec *commonv1.ReplicaSpec, masterRole bool, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error {
 
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
 	logger := commonutil.LoggerForReplica(job, rt)
 
 	podLabels := r.GenLabels(job.GetName())
@@ -270,7 +274,7 @@ func (r *KubeflowPodReconciler) DeletePod(ctx context.Context, ns string, name s
 }
 
 // DecoratePod decorates podTemplate before a Pod is submitted to the APIServer
-func (r *KubeflowPodReconciler) DecoratePod(rtype commonv1.ReplicaType, podTemplate *corev1.PodTemplateSpec, job client.Object) {
+func (r *KubeflowPodReconciler) DecoratePod(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object) {
 	// Default implementation applies nothing to podTemplate
 	return
 }

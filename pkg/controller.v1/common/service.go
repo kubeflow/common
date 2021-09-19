@@ -16,6 +16,7 @@ package common
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
@@ -139,7 +140,7 @@ func (jc *JobController) GetServicesForJob(jobObject interface{}) ([]*v1.Service
 }
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
-func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType apiv1.ReplicaType) ([]*v1.Service, error) {
+func (jc *JobController) FilterServicesForReplicaType(services []*v1.Service, replicaType string) ([]*v1.Service, error) {
 	return core.FilterServicesForReplicaType(services, replicaType)
 }
 
@@ -158,9 +159,11 @@ func (jc *JobController) ReconcileServices(
 	rtype apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec) error {
 
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
 	replicas := int(*spec.Replicas)
 	// Get all services for the type rt.
-	services, err := jc.FilterServicesForReplicaType(services, rtype)
+	services, err := jc.FilterServicesForReplicaType(services, rt)
 	if err != nil {
 		return err
 	}
@@ -171,13 +174,13 @@ func (jc *JobController) ReconcileServices(
 	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
 	//
 	// If replica is 1, return a slice with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
-	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rtype))
+	serviceSlices := jc.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
 
 	for index, serviceSlice := range serviceSlices {
 		if len(serviceSlice) > 1 {
-			commonutil.LoggerForReplica(job, rtype).Warningf("We have too many services for %s %d", rtype, index)
+			commonutil.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
 		} else if len(serviceSlice) == 0 {
-			commonutil.LoggerForReplica(job, rtype).Infof("need to create new service: %s-%d", rtype, index)
+			commonutil.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
 			err = jc.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
@@ -212,9 +215,12 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		return err
 	}
 
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+
 	// Append ReplicaTypeLabelDeprecated and ReplicaIndexLabelDeprecated labels.
 	labels := jc.GenLabels(job.GetName())
-	utillabels.SetReplicaType(labels, rtype)
+	utillabels.SetReplicaType(labels, rt)
 	utillabels.SetReplicaIndexStr(labels, index)
 
 	ports, err := jc.GetPortsFromJob(spec)
@@ -236,13 +242,13 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
-	service.Name = GenGeneralName(job.GetName(), rtype, index)
+	service.Name = GenGeneralName(job.GetName(), rt, index)
 	service.Labels = labels
 	// Create OwnerReference.
 	controllerRef := jc.GenOwnerReference(job)
 
 	// Creation is expected when there is no error returned
-	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
+	expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rt)
 	jc.Expectations.RaiseExpectations(expectationServicesKey, 1, 0)
 
 	err = jc.ServiceControl.CreateServicesWithControllerRef(job.GetNamespace(), service, job.(runtime.Object), controllerRef)
