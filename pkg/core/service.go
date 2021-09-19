@@ -11,16 +11,16 @@ import (
 )
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
-func FilterServicesForReplicaType(services []*v1.Service, replicaType apiv1.ReplicaType) ([]*v1.Service, error) {
+func FilterServicesForReplicaType(services []*v1.Service, replicaType string) ([]*v1.Service, error) {
 	var result []*v1.Service
 
 	selector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabel: string(replicaType),
+		apiv1.ReplicaTypeLabel: replicaType,
 	})
 
 	// TODO(#149): Remove deprecated selector.
 	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabelDeprecated: string(replicaType),
+		apiv1.ReplicaTypeLabelDeprecated: replicaType,
 	})
 
 	for _, service := range services {

@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -300,9 +301,10 @@ func (jc *JobController) ReconcileJobs(
 // ResetExpectations reset the expectation for creates and deletes of pod/service to zero.
 func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) {
 	for rtype := range replicas {
-		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
+		rt := strings.ToLower(string(rtype))
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
 		jc.Expectations.SetExpectations(expectationPodsKey, 0, 0)
-		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rtype)
+		expectationServicesKey := expectation.GenExpectationServicesKey(jobKey, rt)
 		jc.Expectations.SetExpectations(expectationServicesKey, 0, 0)
 	}
 }

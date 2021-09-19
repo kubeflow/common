@@ -2,6 +2,7 @@ package core
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -77,7 +78,7 @@ func PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) b
 // this method applies only to pods with restartPolicy == OnFailure or Always
 func PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod,
-	podFilterFunc func(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error)) (bool, error) {
+	podFilterFunc func(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error)) (bool, error) {
 	if runPolicy.BackoffLimit == nil {
 		return false, nil
 	}
@@ -88,7 +89,8 @@ func PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 			continue
 		}
 		// Convert ReplicaType to lower string.
-		pods, err := podFilterFunc(pods, rtype)
+		rt := strings.ToLower(string(rtype))
+		pods, err := podFilterFunc(pods, rt)
 		if err != nil {
 			return false, err
 		}

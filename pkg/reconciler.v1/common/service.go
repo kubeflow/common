@@ -17,6 +17,7 @@ package common
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/core"
@@ -94,7 +95,7 @@ func (r *KubeflowServiceReconciler) GetServicesForJob(ctx context.Context, job c
 
 // FilterServicesForReplicaType returns service belong to a replicaType.
 func (r *KubeflowServiceReconciler) FilterServicesForReplicaType(services []*corev1.Service,
-	replicaType commonv1.ReplicaType) ([]*corev1.Service, error) {
+	replicaType string) ([]*corev1.Service, error) {
 	return core.FilterServicesForReplicaType(services, replicaType)
 }
 
@@ -110,9 +111,11 @@ func (r *KubeflowServiceReconciler) ReconcileServices(
 	rtype commonv1.ReplicaType,
 	spec *commonv1.ReplicaSpec) error {
 
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
 	replicas := int(*spec.Replicas)
 	// Get all services for the type rt.
-	services, err := r.FilterServicesForReplicaType(services, rtype)
+	services, err := r.FilterServicesForReplicaType(services, rt)
 	if err != nil {
 		return err
 	}
@@ -123,13 +126,13 @@ func (r *KubeflowServiceReconciler) ReconcileServices(
 	// If replica is 4, return a slice with size 4. [[0],[1],[2],[]], a svc with replica-index 3 will be created.
 	//
 	// If replica is 1, return a slice with size 3. [[0],[1],[2]], svc with replica-index 1 and 2 are out of range and will be deleted.
-	serviceSlices := r.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rtype))
+	serviceSlices := r.GetServiceSlices(services, replicas, commonutil.LoggerForReplica(job, rt))
 
 	for index, serviceSlice := range serviceSlices {
 		if len(serviceSlice) > 1 {
-			commonutil.LoggerForReplica(job, rtype).Warningf("We have too many services for %s %d", rtype, index)
+			commonutil.LoggerForReplica(job, rt).Warningf("We have too many services for %s %d", rt, index)
 		} else if len(serviceSlice) == 0 {
-			commonutil.LoggerForReplica(job, rtype).Infof("need to create new service: %s-%d", rtype, index)
+			commonutil.LoggerForReplica(job, rt).Infof("need to create new service: %s-%d", rt, index)
 			err = r.CreateNewService(job, rtype, spec, strconv.Itoa(index))
 			if err != nil {
 				return err
@@ -179,7 +182,9 @@ func (r *KubeflowServiceReconciler) CreateNewService(job client.Object, rtype co
 		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
-	service.Name = core.GenGeneralName(job.GetName(), rtype, index)
+	// Convert ReplicaType to lower string.
+	rt := strings.ToLower(string(rtype))
+	service.Name = core.GenGeneralName(job.GetName(), rt, index)
 	service.Namespace = job.GetNamespace()
 	service.Labels = labels
 	// Create OwnerReference.
@@ -188,7 +193,7 @@ func (r *KubeflowServiceReconciler) CreateNewService(job client.Object, rtype co
 		return err
 	}
 
-	r.DecorateService(rtype, service, job)
+	r.DecorateService(rt, service, job)
 
 	err = r.Create(context.Background(), service)
 	if err != nil && errors.IsTimeout(err) {
@@ -215,7 +220,7 @@ func (r *KubeflowServiceReconciler) DeleteService(ns string, name string, job cl
 }
 
 // DecorateService decorates the Service before it's submitted to APIServer
-func (r *KubeflowServiceReconciler) DecorateService(rtype commonv1.ReplicaType, svc *corev1.Service, job client.Object) {
+func (r *KubeflowServiceReconciler) DecorateService(rtype string, svc *corev1.Service, job client.Object) {
 	// Default implementation applies nothing to podTemplate
 	return
 }

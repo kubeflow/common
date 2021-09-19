@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
@@ -113,7 +114,6 @@ func (jc *JobController) AddPod(obj interface{}) {
 
 		return
 	}
-
 }
 
 // When a pod is updated, figure out what job is managing it and wake it up.
@@ -255,7 +255,7 @@ func (jc *JobController) GetPodsForJob(jobObject interface{}) ([]*v1.Pod, error)
 }
 
 // FilterPodsForReplicaType returns pods belong to a replicaType.
-func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error) {
+func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
 	return core.FilterPodsForReplicaType(pods, replicaType)
 }
 
@@ -288,12 +288,14 @@ func (jc *JobController) ReconcilePods(
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
 		return err
 	}
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
 
 	// Convert ReplicaType to lower string.
-	logger := commonutil.LoggerForReplica(metaObject, rtype)
+	rt := strings.ToLower(string(rtype))
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
+
+	logger := commonutil.LoggerForReplica(metaObject, rt)
 	// Get all pods for the type rt.
-	pods, err = jc.FilterPodsForReplicaType(pods, rtype)
+	pods, err = jc.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
 	}
@@ -311,13 +313,13 @@ func (jc *JobController) ReconcilePods(
 	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {
-			logger.Warningf("We have too many pods for %s %d", rtype, index)
+			logger.Warningf("We have too many pods for %s %d", rt, index)
 		} else if len(podSlice) == 0 {
-			logger.Infof("Need to create new pod: %s-%d", rtype, index)
+			logger.Infof("Need to create new pod: %s-%d", rt, index)
 
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
-			err = jc.createNewPod(job, rtype, index, spec, masterRole, replicas)
+			err = jc.createNewPod(job, rt, index, spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -365,7 +367,7 @@ func (jc *JobController) ReconcilePods(
 }
 
 // createNewPod creates a new pod for the given index and type.
-func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, index int, spec *apiv1.ReplicaSpec, masterRole bool,
+func (jc *JobController) createNewPod(job interface{}, rt string, index int, spec *apiv1.ReplicaSpec, masterRole bool,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)
