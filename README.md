@@ -1,6 +1,6 @@
-# Kubeflow common for operators 
+# Kubeflow common for operators
 
-[![Build Status](https://travis-ci.com/kubeflow/common.svg?branch=master)](https://travis-ci.com/kubeflow/common/)
+[![Build Status](https://github.com/kubeflow/common/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/kubeflow/common/actions/?query=workflow%3ABuild)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubeflow/common)](https://goreportcard.com/report/github.com/kubeflow/common)
 
 This repo contains the libraries for writing a custom job operators such as tf-operator and pytorch-operator.
@@ -39,7 +39,7 @@ jobController := common.JobController {
 - Within you main reconcile loop, call the [JobController.ReconcileJobs](pkg/controller.v1/common/job.go) method.
 ```go
     reconcile(...) {
-    	// Your main reconcile loop. 
+    	// Your main reconcile loop.
     	...
     	jobController.ReconcileJobs(...)
     	...
