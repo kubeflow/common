@@ -47,4 +47,4 @@ jobs:
         # Here we run all tests in pkg and we have to use `-ignore`
         # since goveralls uses `filepath.Match` to match ignore files
         # and it does not support patterns like `**`.
-        goveralls -service=github -v -package ./... -ignore "test_job/client/*/*.go,test_job/client/*/*/*.go,test_job/client/*/*/*/*.go,test_job/client/*/*/*/*/*.go,test_job/client/*/*/*/*/*/*.go,test_job/client/*/*/*/*/*/*/*.go,test_job/testutil/*.go,test_job/*/*/*/zz_generated.*.go,test_job/*/*/*/*_generated.go,pkg/apis/common/*/zz_generated.*.go,pkg/apis/common/*/*_generated.go"
+        goveralls -service=github -v -package ./... -ignore "test_job/client/*/*.go,test_job/client/*/*/*.go,test_job/client/*/*/*/*.go,test_job/client/*/*/*/*/*.go,test_job/client/*/*/*/*/*/*.go,test_job/client/*/*/*/*/*/*/*.go,test_job/testutil/*.go,test_job/*/*/*/zz_generated.*.go,test_job/*/*/*/*_generated.go,pkg/apis/common/*/zz_generated.*.go,pkg/apis/common/*/*_generated.go" || echo "push to coveralls failed"
