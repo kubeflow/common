@@ -313,7 +313,7 @@ func (jc *JobController) PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatu
 }
 
 // PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
-// this method applies only to pods with restartPolicy == OnFailure or Always
+// this method applies only to pods when restartPolicy is one of OnFailure, Always or ExitCode
 func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
 	return core.PastBackoffLimit(jobName, runPolicy, replicas, pods, jc.FilterPodsForReplicaType)
