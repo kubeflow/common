@@ -325,7 +325,7 @@ func (jc *JobController) ReconcileJobs(
 }
 
 // ResetExpectations reset the expectation for creates and deletes of pod/service to zero.
-func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec)  {
+func (jc *JobController) ResetExpectations(jobKey string, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) {
 	for rtype := range replicas {
 		rt := strings.ToLower(string(rtype))
 		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
@@ -348,7 +348,7 @@ func (jc *JobController) PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatu
 }
 
 // PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
-// this method applies only to pods with restartPolicy == OnFailure or Always
+// this method applies only to pods when restartPolicy is one of OnFailure, Always or ExitCode
 func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
 	if runPolicy.BackoffLimit == nil {
@@ -356,8 +356,8 @@ func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPo
 	}
 	result := int32(0)
 	for rtype, spec := range replicas {
-		if spec.RestartPolicy != apiv1.RestartPolicyOnFailure && spec.RestartPolicy != apiv1.RestartPolicyAlways {
-			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure or Always. Not counted in backoff limit.", rtype, jobName)
+		if spec.RestartPolicy != apiv1.RestartPolicyOnFailure && spec.RestartPolicy != apiv1.RestartPolicyAlways && spec.RestartPolicy != apiv1.RestartPolicyExitCode {
+			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure, Always or ExitCode. Not counted in backoff limit.", rtype, jobName)
 			continue
 		}
 		// Convert ReplicaType to lower string.
