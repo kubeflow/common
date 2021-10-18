@@ -74,7 +74,7 @@ func PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) b
 }
 
 // PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
-// this method applies only to pods with restartPolicy == OnFailure or Always
+// this method applies only to pods when restartPolicy is one of OnFailure, Always or ExitCode
 func PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod,
 	podFilterFunc func(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error)) (bool, error) {
@@ -83,8 +83,8 @@ func PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
 	}
 	result := int32(0)
 	for rtype, spec := range replicas {
-		if spec.RestartPolicy != apiv1.RestartPolicyOnFailure && spec.RestartPolicy != apiv1.RestartPolicyAlways {
-			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure or Always. Not counted in backoff limit.", rtype, jobName)
+		if spec.RestartPolicy != apiv1.RestartPolicyOnFailure && spec.RestartPolicy != apiv1.RestartPolicyAlways && spec.RestartPolicy != apiv1.RestartPolicyExitCode {
+			log.Warnf("The restart policy of replica %v of the job %v is not OnFailure, Always or ExitCode. Not counted in backoff limit.", rtype, jobName)
 			continue
 		}
 		// Convert ReplicaType to lower string.
