@@ -69,7 +69,16 @@ type ReplicaStatus struct {
 type ReplicaSpec struct {
 	// Replicas is the desired number of replicas of the given template.
 	// If unspecified, defaults to 1.
+	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// minReplicas is the lower limit for the number of replicas to which the training job
+	// can scale down.  It defaults to nil.
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	// upper limit for the number of pods that can be set by the autoscaler; cannot be smaller than MinReplicas, defaults to nil.
+	// +optional
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 
 	// Template is the object that describes the pod that
 	// will be created for this replica. RestartPolicy in PodTemplateSpec
