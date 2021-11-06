@@ -364,6 +364,11 @@ func schema_pkg_apis_common_v1_JobStatus(ref common.ReferenceCallback) common.Op
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions is an array of current observed job conditions.",
 							Type:        []string{"array"},
