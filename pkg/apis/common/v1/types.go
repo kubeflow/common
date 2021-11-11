@@ -22,8 +22,6 @@ import (
 // +k8s:deepcopy-gen=true
 // JobStatus represents the current observed state of the training Job.
 type JobStatus struct {
-	// +listType=map
-	// listMapKey=type
 	// Conditions is an array of current observed job conditions.
 	Conditions []JobCondition `json:"conditions"`
 
