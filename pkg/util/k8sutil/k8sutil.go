@@ -20,7 +20,7 @@ import (
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -99,8 +99,12 @@ func FilterActivePods(pods []*v1.Pod) []*v1.Pod {
 		if IsPodActive(p) {
 			result = append(result, p)
 		} else {
+			ts := p.DeletionTimestamp
+			if ts == nil {
+				ts = &metav1.Time{}
+			}
 			log.Infof("Ignoring inactive pod %v/%v in state %v, deletion time %v",
-				p.Namespace, p.Name, p.Status.Phase, p.DeletionTimestamp)
+				p.Namespace, p.Name, p.Status.Phase, ts)
 		}
 	}
 	return result
