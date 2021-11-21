@@ -1,16 +1,15 @@
 package expectation
 
 import (
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"strings"
 )
 
 // GenExpectationPodsKey generates an expectation key for pods of a job
-func GenExpectationPodsKey(jobKey string, replicaType apiv1.ReplicaType) string {
-	return jobKey + "/" + strings.ToLower(string(replicaType)) + "/pods"
+func GenExpectationPodsKey(jobKey string, replicaType string) string {
+	return jobKey + "/" + strings.ToLower(replicaType) + "/pods"
 }
 
 // GenExpectationPodsKey generates an expectation key for services of a job
-func GenExpectationServicesKey(jobKey string, replicaType apiv1.ReplicaType) string {
-	return jobKey + "/" + strings.ToLower(string(replicaType)) + "/services"
+func GenExpectationServicesKey(jobKey string, replicaType string) string {
+	return jobKey + "/" + strings.ToLower(replicaType) + "/services"
 }

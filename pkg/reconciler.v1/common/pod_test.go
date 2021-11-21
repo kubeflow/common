@@ -30,7 +30,7 @@ import (
 func TestGenPodName(t *testing.T) {
 	type tc struct {
 		testJob      *testjobv1.TestJob
-		testRType    commonv1.ReplicaType
+		testRType    string
 		testIndex    string
 		expectedName string
 	}
@@ -40,7 +40,7 @@ func TestGenPodName(t *testing.T) {
 			tj.SetName("hello-world")
 			return tc{
 				testJob:      tj,
-				testRType:    commonv1.ReplicaType(testjobv1.TestReplicaTypeWorker),
+				testRType:    string(testjobv1.TestReplicaTypeWorker),
 				testIndex:    "1",
 				expectedName: "hello-world-worker-1",
 			}
@@ -70,7 +70,7 @@ func PodInSlice(pod *corev1.Pod, pods []*corev1.Pod) bool {
 func TestFilterPodsForReplicaType(t *testing.T) {
 	type tc struct {
 		testPods     []*corev1.Pod
-		testRType    commonv1.ReplicaType
+		testRType    string
 		expectedPods []*corev1.Pod
 	}
 	testCase := []tc{
@@ -119,7 +119,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 
 			return tc{
 				testPods:     allPods,
-				testRType:    commonv1.ReplicaType(testjobv1.TestReplicaTypeWorker),
+				testRType:    string(testjobv1.TestReplicaTypeWorker),
 				expectedPods: filteredPods,
 			}
 		}(),

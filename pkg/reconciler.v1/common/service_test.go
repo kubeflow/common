@@ -16,6 +16,7 @@ package common_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -60,7 +61,7 @@ func TestCreateNewService(t *testing.T) {
 						commonv1.OperatorNameLabel:        "Test Reconciler",
 						commonv1.JobNameLabelDeprecated:   jobName,
 						commonv1.JobNameLabel:             jobName,
-						commonv1.ReplicaTypeLabel:         string(testjobv1.TestReplicaTypeWorker),
+						commonv1.ReplicaTypeLabel:         strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
 						commonv1.ReplicaIndexLabel:        idx,
 					},
 				},

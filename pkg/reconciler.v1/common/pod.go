@@ -17,6 +17,7 @@ package common
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -78,7 +79,7 @@ func BareKubeflowPodReconciler(client client.Client) *KubeflowPodReconciler {
 }
 
 // GenPodName returns the name of the Pod based on jobName, replicaType and its index
-func (r *KubeflowPodReconciler) GenPodName(jobName string, rtype commonv1.ReplicaType, index string) string {
+func (r *KubeflowPodReconciler) GenPodName(jobName string, rtype string, index string) string {
 	return core.GenGeneralName(jobName, rtype, index)
 }
 
@@ -110,7 +111,7 @@ func (r *KubeflowPodReconciler) GetPodSlices(pods []*corev1.Pod, replicas int, l
 }
 
 // FilterPodsForReplicaType filters out Pods for this replicaType
-func (r *KubeflowPodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType commonv1.ReplicaType) ([]*corev1.Pod, error) {
+func (r *KubeflowPodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType string) ([]*corev1.Pod, error) {
 	return core.FilterPodsForReplicaType(pods, replicaType)
 }
 
@@ -120,21 +121,22 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 	job client.Object,
 	jobStatus *commonv1.JobStatus,
 	pods []*corev1.Pod,
-	rtype commonv1.ReplicaType,
+	rType commonv1.ReplicaType,
 	spec *commonv1.ReplicaSpec,
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error {
 
+	rt := strings.ToLower(string(rType))
 	// Convert ReplicaType to lower string.
-	logger := commonutil.LoggerForReplica(job, rtype)
+	logger := commonutil.LoggerForReplica(job, rt)
 	// Get all pods for the type rt.
-	pods, err := r.FilterPodsForReplicaType(pods, rtype)
+	pods, err := r.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
 	}
 	numReplicas := int(*spec.Replicas)
 	var masterRole bool
 
-	core.InitializeReplicaStatuses(jobStatus, rtype)
+	core.InitializeReplicaStatuses(jobStatus, rType)
 
 	// GetPodSlices will return enough information here to make decision to add/remove/update resources.
 	//
@@ -145,13 +147,13 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 	podSlices := r.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {
-			logger.Warningf("We have too many pods for %s %d", rtype, index)
+			logger.Warningf("We have too many pods for %s %d", rt, index)
 		} else if len(podSlice) == 0 {
-			logger.Infof("Need to create new pod: %s-%d", rtype, index)
+			logger.Infof("Need to create new pod: %s-%d", rt, index)
 
 			// check if this replica is the master role
-			masterRole = r.IsMasterRole(replicas, rtype, index)
-			err = r.CreateNewPod(job, rtype, strconv.Itoa(index), spec, masterRole, replicas)
+			masterRole = r.IsMasterRole(replicas, commonv1.ReplicaType(rt), index)
+			err = r.CreateNewPod(job, rt, strconv.Itoa(index), spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -188,7 +190,7 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 				}
 			}
 
-			core.UpdateJobReplicaStatuses(jobStatus, rtype, pod)
+			core.UpdateJobReplicaStatuses(jobStatus, rType, pod)
 		}
 	}
 	return nil
@@ -196,13 +198,13 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 }
 
 // CreateNewPod generate Pods for this job and submits creation request to APIServer
-func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rt commonv1.ReplicaType, index string,
+func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rt string, index string,
 	spec *commonv1.ReplicaSpec, masterRole bool, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error {
 
 	logger := commonutil.LoggerForReplica(job, rt)
 
 	podLabels := r.GenLabels(job.GetName())
-	podLabels[commonv1.ReplicaTypeLabel] = string(rt)
+	podLabels[commonv1.ReplicaTypeLabel] = rt
 	podLabels[commonv1.ReplicaIndexLabel] = index
 	if masterRole {
 		podLabels[commonv1.JobRoleLabel] = "master"
@@ -270,7 +272,7 @@ func (r *KubeflowPodReconciler) DeletePod(ctx context.Context, ns string, name s
 }
 
 // DecoratePod decorates podTemplate before a Pod is submitted to the APIServer
-func (r *KubeflowPodReconciler) DecoratePod(rtype commonv1.ReplicaType, podTemplate *corev1.PodTemplateSpec, job client.Object) {
+func (r *KubeflowPodReconciler) DecoratePod(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object) {
 	// Default implementation applies nothing to podTemplate
 	return
 }

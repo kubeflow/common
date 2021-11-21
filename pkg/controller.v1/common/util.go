@@ -47,8 +47,8 @@ func (p ReplicasPriority) Swap(i, j int) {
 	p[i], p[j] = p[j], p[i]
 }
 
-func GenGeneralName(jobName string, rtype apiv1.ReplicaType, index string) string {
-	n := jobName + "-" + strings.ToLower(string(rtype)) + "-" + index
+func GenGeneralName(jobName string, rtype string, index string) string {
+	n := jobName + "-" + strings.ToLower(rtype) + "-" + index
 	return strings.Replace(n, "/", "-", -1)
 }
 

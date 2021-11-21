@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"time"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/core"
@@ -306,7 +307,7 @@ func (r *KubeflowJobReconciler) UpdateJobStatus(
 		logrus.Infof("%s=%s, ReplicaType=%s expected=%d, running=%d, succeeded=%d , failed=%d",
 			jobKind, jobNamespacedName, rtype, expected, running, succeeded, failed)
 
-		if r.IsFlagReplicaTypeForJobStatus(rtype) {
+		if r.IsFlagReplicaTypeForJobStatus(string(rtype)) {
 			if running > 0 {
 				msg := fmt.Sprintf("%s %s is running.", jobKind, jobNamespacedName)
 				err := commonutil.UpdateJobConditions(jobStatus, commonv1.JobRunning, commonutil.JobRunningReason, msg)
@@ -447,7 +448,7 @@ func (r *KubeflowJobReconciler) CleanupJob(runPolicy *commonv1.RunPolicy, status
 }
 
 // IsFlagReplicaTypeForJobStatus checks if this replicaType is the flag replicaType for the status of KubeflowJob
-func (r *KubeflowJobReconciler) IsFlagReplicaTypeForJobStatus(rtype commonv1.ReplicaType) bool {
+func (r *KubeflowJobReconciler) IsFlagReplicaTypeForJobStatus(rtype string) bool {
 	logrus.Warnf(WarnDefaultImplementationTemplate, "IsFlagReplicaTypeForJobStatus")
 	return true
 }

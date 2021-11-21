@@ -10,16 +10,16 @@ import (
 )
 
 // FilterPodsForReplicaType returns pods belong to a replicaType.
-func FilterPodsForReplicaType(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error) {
+func FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
 	var result []*v1.Pod
 
 	selector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabel: string(replicaType),
+		apiv1.ReplicaTypeLabel: replicaType,
 	})
 
 	// TODO(#149): Remove deprecated selector.
 	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabelDeprecated: string(replicaType),
+		apiv1.ReplicaTypeLabelDeprecated: replicaType,
 	})
 
 	for _, pod := range pods {

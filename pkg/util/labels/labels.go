@@ -54,9 +54,9 @@ func ReplicaType(labels map[string]string) (v1.ReplicaType, error) {
 	return v1.ReplicaType(v), nil
 }
 
-func SetReplicaType(labels map[string]string, rt v1.ReplicaType) {
-	labels[v1.ReplicaTypeLabel] = string(rt)
-	labels[v1.ReplicaTypeLabelDeprecated] = string(rt)
+func SetReplicaType(labels map[string]string, rt string) {
+	labels[v1.ReplicaTypeLabel] = rt
+	labels[v1.ReplicaTypeLabelDeprecated] = rt
 }
 
 func HasKnownLabels(labels map[string]string, groupName string) bool {
