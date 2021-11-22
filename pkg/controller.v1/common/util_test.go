@@ -44,7 +44,7 @@ func TestGenGeneralName(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		actual := GenGeneralName(tc.key, tc.replicaType, tc.index)
+		actual := GenGeneralName(tc.key, string(tc.replicaType), tc.index)
 		if actual != tc.expectedName {
 			t.Errorf("Expected name %s, got %s", tc.expectedName, actual)
 		}

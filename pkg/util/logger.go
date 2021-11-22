@@ -15,16 +15,15 @@
 package util
 
 import (
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func LoggerForReplica(job metav1.Object, rtype apiv1.ReplicaType) *log.Entry {
+func LoggerForReplica(job metav1.Object, rtype string) *log.Entry {
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// Its more common in K8s to use a period to indicate namespace.name. So that's what we use.

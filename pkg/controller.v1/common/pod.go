@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
@@ -105,7 +106,7 @@ func (jc *JobController) AddPod(obj interface{}) {
 			return
 		}
 
-		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rType)
+		expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, string(rType))
 
 		jc.Expectations.CreationObserved(expectationPodsKey)
 		// TODO: we may need add backoff here
@@ -206,7 +207,7 @@ func (jc *JobController) DeletePod(obj interface{}) {
 		return
 	}
 
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rType)
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, string(rType))
 
 	jc.Expectations.DeletionObserved(expectationPodsKey)
 	deletedPodsCount.Inc()
@@ -255,7 +256,7 @@ func (jc *JobController) GetPodsForJob(jobObject interface{}) ([]*v1.Pod, error)
 }
 
 // FilterPodsForReplicaType returns pods belong to a replicaType.
-func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType apiv1.ReplicaType) ([]*v1.Pod, error) {
+func (jc *JobController) FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, error) {
 	return core.FilterPodsForReplicaType(pods, replicaType)
 }
 
@@ -271,10 +272,11 @@ func (jc *JobController) ReconcilePods(
 	job interface{},
 	jobStatus *apiv1.JobStatus,
 	pods []*v1.Pod,
-	rtype apiv1.ReplicaType,
+	rType apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
+	rt := strings.ToLower(string(rType))
 	metaObject, ok := job.(metav1.Object)
 	if !ok {
 		return fmt.Errorf("job is not a metav1.Object type")
@@ -288,19 +290,19 @@ func (jc *JobController) ReconcilePods(
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
 		return err
 	}
-	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rtype)
+	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
 
 	// Convert ReplicaType to lower string.
-	logger := commonutil.LoggerForReplica(metaObject, rtype)
+	logger := commonutil.LoggerForReplica(metaObject, rt)
 	// Get all pods for the type rt.
-	pods, err = jc.FilterPodsForReplicaType(pods, rtype)
+	pods, err = jc.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
 	}
 	numReplicas := int(*spec.Replicas)
 	var masterRole bool
 
-	initializeReplicaStatuses(jobStatus, rtype)
+	initializeReplicaStatuses(jobStatus, rType)
 
 	// GetPodSlices will return enough information here to make decision to add/remove/update resources.
 	//
@@ -311,13 +313,13 @@ func (jc *JobController) ReconcilePods(
 	podSlices := jc.GetPodSlices(pods, numReplicas, logger)
 	for index, podSlice := range podSlices {
 		if len(podSlice) > 1 {
-			logger.Warningf("We have too many pods for %s %d", rtype, index)
+			logger.Warningf("We have too many pods for %s %d", rt, index)
 		} else if len(podSlice) == 0 {
-			logger.Infof("Need to create new pod: %s-%d", rtype, index)
+			logger.Infof("Need to create new pod: %s-%d", rt, index)
 
 			// check if this replica is the master role
-			masterRole = jc.Controller.IsMasterRole(replicas, rtype, index)
-			err = jc.createNewPod(job, rtype, index, spec, masterRole, replicas)
+			masterRole = jc.Controller.IsMasterRole(replicas, rType, index)
+			err = jc.createNewPod(job, rt, index, spec, masterRole, replicas)
 			if err != nil {
 				return err
 			}
@@ -358,14 +360,14 @@ func (jc *JobController) ReconcilePods(
 				}
 			}
 
-			updateJobReplicaStatuses(jobStatus, rtype, pod)
+			updateJobReplicaStatuses(jobStatus, rType, pod)
 		}
 	}
 	return nil
 }
 
 // createNewPod creates a new pod for the given index and type.
-func (jc *JobController) createNewPod(job interface{}, rt apiv1.ReplicaType, index int, spec *apiv1.ReplicaSpec, masterRole bool,
+func (jc *JobController) createNewPod(job interface{}, rt string, index int, spec *apiv1.ReplicaSpec, masterRole bool,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
 
 	metaObject, ok := job.(metav1.Object)

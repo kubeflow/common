@@ -78,7 +78,7 @@ type GangSchedulingInterface interface {
 
 	// DecoratePodForGangScheduling SHOULD be overridden if gang scheduler demands Pods associated with PodGroup to be
 	// decorated with specific requests.
-	DecoratePodForGangScheduling(rtype commonv1.ReplicaType, podTemplate *corev1.PodTemplateSpec, job client.Object)
+	DecoratePodForGangScheduling(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object)
 }
 
 // PodInterface defines the abstract interface for Pod related actions, such like get, create or delete Pod
@@ -90,14 +90,14 @@ type PodInterface interface {
 	GetDefaultContainerName() string
 
 	// GenPodName CAN be overridden to customize Pod name.
-	GenPodName(jobName string, rtype commonv1.ReplicaType, index string) string
+	GenPodName(jobName string, rtype string, index string) string
 
 	// GetPodsForJob CAN be overridden to customize how to list all pods with the job.
 	GetPodsForJob(ctx context.Context, job client.Object) ([]*corev1.Pod, error)
 
 	// FilterPodsForReplicaType CAN be overridden if the linking approach between pods and replicaType changes as this
 	// function filters out pods for specific replica type from all pods associated with the job.
-	FilterPodsForReplicaType(pods []*corev1.Pod, replicaType commonv1.ReplicaType) ([]*corev1.Pod, error)
+	FilterPodsForReplicaType(pods []*corev1.Pod, replicaType string) ([]*corev1.Pod, error)
 
 	// GetPodSlices SHOULD NOT be overridden as it generates pod slices for further pod processing.
 	GetPodSlices(pods []*corev1.Pod, replicas int, logger *logrus.Entry) [][]*corev1.Pod
@@ -113,7 +113,7 @@ type PodInterface interface {
 		replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error
 
 	// CreateNewPod CAN be overridden to customize how to create a new pod.
-	CreateNewPod(job client.Object, rt commonv1.ReplicaType, index string,
+	CreateNewPod(job client.Object, rt string, index string,
 		spec *commonv1.ReplicaSpec, masterRole bool, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error
 
 	// DeletePod CAN be overridden to customize how to delete a pod of {name} in namespace {ns}.
@@ -121,7 +121,7 @@ type PodInterface interface {
 
 	// DecoratePod CAN be overridden if customization to the pod is needed. The default implementation applies nothing
 	// to the pod.
-	DecoratePod(rtype commonv1.ReplicaType, podTemplate *corev1.PodTemplateSpec, job client.Object)
+	DecoratePod(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object)
 }
 
 // ServiceInterface defines the abstract interface for Pod related actions, such like get, create or delete Service
@@ -136,8 +136,7 @@ type ServiceInterface interface {
 	GetServicesForJob(ctx context.Context, job client.Object) ([]*corev1.Service, error)
 
 	// FilterServicesForReplicaType CAN be overridden to customize how to filter out services for this Replica Type.
-	FilterServicesForReplicaType(services []*corev1.Service,
-		replicaType commonv1.ReplicaType) ([]*corev1.Service, error)
+	FilterServicesForReplicaType(services []*corev1.Service, replicaType string) ([]*corev1.Service, error)
 
 	// GetServiceSlices CAN be overridden to customize how to generate service slices.
 	GetServiceSlices(services []*corev1.Service, replicas int, logger *logrus.Entry) [][]*corev1.Service
@@ -157,7 +156,7 @@ type ServiceInterface interface {
 	DeleteService(ns string, name string, job client.Object) error
 
 	// DecorateService CAN be overridden to customize this service right before being created
-	DecorateService(rtype commonv1.ReplicaType, svc *corev1.Service, job client.Object)
+	DecorateService(rtype string, svc *corev1.Service, job client.Object)
 }
 
 // JobInterface defines the abstract interface for Pod related actions, such like get, create or delete TFJob,
@@ -222,7 +221,7 @@ type JobInterface interface {
 
 	// IsFlagReplicaTypeForJobStatus CAN be overridden to customize how to determine if this ReplicaType is the
 	// flag ReplicaType for the status of this kind of job
-	IsFlagReplicaTypeForJobStatus(rtype commonv1.ReplicaType) bool
+	IsFlagReplicaTypeForJobStatus(rtype string) bool
 
 	// IsJobSucceeded CAN be overridden to customize how to determine if this job is succeeded.
 	IsJobSucceeded(status commonv1.JobStatus) bool

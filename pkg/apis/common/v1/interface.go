@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -44,7 +44,7 @@ type ControllerInterface interface {
 	UpdateJobStatusInApiServer(job interface{}, jobStatus *JobStatus) error
 
 	// SetClusterSpec sets the cluster spec for the pod
-	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype ReplicaType, index string) error
+	SetClusterSpec(job interface{}, podTemplate *v1.PodTemplateSpec, rtype, index string) error
 
 	// Returns the default container name in pod
 	GetDefaultContainerName() string
