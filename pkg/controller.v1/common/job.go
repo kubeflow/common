@@ -327,7 +327,9 @@ func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 		return nil
 	}
 	duration := time.Second * time.Duration(*ttl)
-	// todo: Is the jobStatus.CompletionTime maybe nil ?
+	if jobStatus.CompletionTime == nil {
+		return fmt.Errorf("job completion time is nil, cannot cleanup")
+	}
 	finishTime := jobStatus.CompletionTime
 	expireTime := finishTime.Add(duration)
 	if currentTime.After(expireTime) {
