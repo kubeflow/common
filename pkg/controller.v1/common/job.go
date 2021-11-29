@@ -101,10 +101,6 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		if err := jc.CleanupJob(runPolicy, jobStatus, job); err != nil {
-			return err
-		}
-
 		if jc.Config.EnableGangScheduling {
 			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
 			if err := jc.DeletePodGroup(metaObject); err != nil {
@@ -113,6 +109,10 @@ func (jc *JobController) ReconcileJobs(
 			} else {
 				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
 			}
+		}
+
+		if err := jc.CleanupJob(runPolicy, jobStatus, job); err != nil {
+			return err
 		}
 
 		// At this point the pods may have been deleted.
