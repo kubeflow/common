@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/reconciler.v1/common"
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
 	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
 	test_utilv1 "github.com/kubeflow/common/test_job/test_util/v1"
@@ -75,8 +74,7 @@ func TestCreateNewService(t *testing.T) {
 			}
 		}(),
 	}
-	actualReconciler := test_job.NewTestReconciler()
-	var testReconciler common.KubeflowReconcilerInterface = actualReconciler
+	testReconciler := test_job.NewTestReconciler()
 
 	for _, c := range testCase {
 		err := testReconciler.CreateNewService(c.testJob, c.testRType, c.testSpec, c.testIndex)
@@ -86,7 +84,7 @@ func TestCreateNewService(t *testing.T) {
 		}
 
 		found := false
-		for _, obj := range actualReconciler.DC.Cache {
+		for _, obj := range testReconciler.DC.Cache {
 			if obj.GetName() == c.expectedService.GetName() && obj.GetNamespace() == c.expectedService.GetNamespace() {
 				found = true
 				svcCreated := obj.(*corev1.Service)

@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const ReconcilerName = "Kubeflow Reconciler"
+const ReconcilerName = "common-reconciler"
 
-// GetReconcilerName returns the name of this reconciler, which is "Kubeflow Reconciler"
+// GetReconcilerName returns the name of this reconciler, which is "common-reconciler"
 func (r *ReconcilerUtil) GetReconcilerName() string {
 	return ReconcilerName
 }

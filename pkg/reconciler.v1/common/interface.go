@@ -32,7 +32,7 @@ import (
 // recorder or logger
 type ReconcilerUtilInterface interface {
 	// GetReconcilerName SHOULD be overridden if a new Reconciler is defined. The default implementation returns
-	// "Kubeflow Reconciler"
+	// "common-reconciler"
 	GetReconcilerName() string
 
 	// GetRecorder CAN be overridden to customize EventRecorder
@@ -48,7 +48,7 @@ type ReconcilerUtilInterface interface {
 // GangSchedulingInterface defines the abstract interface for gang-scheduling related actions, such like get, create or
 // delete PodGroup
 type GangSchedulingInterface interface {
-	// OverrideForGangSchedulingInterface MUST NOT be overridden as it reset ReconcilerUtilInterface
+	// OverrideForGangSchedulingInterface MUST NOT be overridden as it resets ReconcilerUtilInterface
 	OverrideForGangSchedulingInterface(ui ReconcilerUtilInterface)
 
 	// GangSchedulingEnabled CAN be overridden if definition of gang-scheduling enabling changes.
@@ -238,22 +238,4 @@ type JobInterface interface {
 
 	// PastActiveDeadline CAN be overridden to customize how to determine if this job has past activate deadline.
 	PastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus *commonv1.JobStatus) bool
-}
-
-// KubeflowReconcilerInterface defines the abstract interface for a base reconciler for kubeflow jobs.
-type KubeflowReconcilerInterface interface {
-	JobInterface
-	PodInterface
-	ServiceInterface
-	GangSchedulingInterface
-	ReconcilerUtilInterface
-
-	// OverrideForKubeflowReconcilerInterface MUST NOT be overridden as it reset ReconcilerUtilInterface, PodInterface, ServiceInterface, JobInterface, GangSchedulingInterface
-	OverrideForKubeflowReconcilerInterface(ji JobInterface, pi PodInterface, si ServiceInterface, gi GangSchedulingInterface, ui ReconcilerUtilInterface)
-
-	// Reconcile CAN be overridden to customize how to handle a request.
-	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
-
-	// SetupWithManager CAN be overridden to customize how to set up the reconciler with the manager.
-	SetupWithManager(mgr ctrl.Manager, obj client.Object) error
 }

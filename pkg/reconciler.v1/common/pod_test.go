@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/reconciler.v1/common"
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
 	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
 	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
@@ -47,8 +46,7 @@ func TestGenPodName(t *testing.T) {
 		}(),
 	}
 
-	actualReconciler := test_job.NewTestReconciler()
-	var testReconciler common.KubeflowReconcilerInterface = actualReconciler
+	testReconciler := test_job.NewTestReconciler()
 
 	for _, c := range testCase {
 		na := testReconciler.GenPodName(c.testJob.GetName(), c.testRType, c.testIndex)
@@ -125,8 +123,7 @@ func TestFilterPodsForReplicaType(t *testing.T) {
 		}(),
 	}
 
-	actualReconciler := test_job.NewTestReconciler()
-	var testReconciler common.KubeflowReconcilerInterface = actualReconciler
+	testReconciler := test_job.NewTestReconciler()
 
 	for _, c := range testCase {
 		filtered, err := testReconciler.FilterPodsForReplicaType(c.testPods, c.testRType)

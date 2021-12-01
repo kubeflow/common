@@ -20,7 +20,6 @@ import (
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
 
-	"github.com/kubeflow/common/pkg/reconciler.v1/common"
 	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
 )
 
@@ -43,8 +42,7 @@ func TestGenLabels(t *testing.T) {
 		}(),
 	}
 
-	actualReconciler := test_job.NewTestReconciler()
-	var testReconciler common.KubeflowReconcilerInterface = actualReconciler
+	testReconciler := test_job.NewTestReconciler()
 
 	for _, c := range testCase {
 		labels := testReconciler.GenLabels(c.testJobName)

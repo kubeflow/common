@@ -3,11 +3,10 @@ package test_job
 import (
 	"context"
 
-	"github.com/go-logr/logr"
-
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	common_reconciler "github.com/kubeflow/common/pkg/reconciler.v1/common"
 	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	"github.com/kubeflow/common/test_job/client/clientset/versioned/scheme"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,12 +14,16 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var _ common_reconciler.KubeflowReconcilerInterface = &TestReconciler{}
-
 type TestReconciler struct {
-	common_reconciler.KubeflowReconciler
+	common_reconciler.ReconcilerUtil
+	common_reconciler.ServiceReconciler
+	common_reconciler.PodReconciler
+	common_reconciler.VolcanoReconciler
+	common_reconciler.JobReconciler
+
 	DC       *DummyClient
 	Job      *v1.TestJob
 	Pods     []*corev1.Pod
@@ -33,50 +36,79 @@ func NewTestReconciler() *TestReconciler {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
 
-	kubeflowReconciler := common_reconciler.BareKubeflowReconciler()
-
 	dummy_client := &DummyClient{}
 
-	// Generate Bare Components
-	jobInter := common_reconciler.BareKubeflowJobReconciler(dummy_client)
-	podInter := common_reconciler.BareKubeflowPodReconciler(dummy_client)
-	svcInter := common_reconciler.BareKubeflowServiceReconciler(dummy_client)
-	gangInter := common_reconciler.BareVolcanoReconciler(dummy_client, nil, true)
-	utilInter := common_reconciler.BareUtilReconciler(nil, logr.FromContext(context.Background()), scheme)
-
-	// Assign interfaces for jobInterface
-	jobInter.PodInterface = podInter
-	jobInter.ServiceInterface = svcInter
-	jobInter.GangSchedulingInterface = gangInter
-	jobInter.ReconcilerUtilInterface = utilInter
-
-	// Assign interfaces for podInterface
-	podInter.JobInterface = jobInter
-	podInter.GangSchedulingInterface = gangInter
-	podInter.ReconcilerUtilInterface = utilInter
-
-	// Assign interfaces for svcInterface
-	svcInter.PodInterface = podInter
-	svcInter.JobInterface = jobInter
-	svcInter.ReconcilerUtilInterface = utilInter
-
-	// Assign interfaces for gangInterface
-	gangInter.ReconcilerUtilInterface = utilInter
-
-	// Prepare KubeflowReconciler
-	kubeflowReconciler.JobInterface = jobInter
-	kubeflowReconciler.PodInterface = podInter
-	kubeflowReconciler.ServiceInterface = svcInter
-	kubeflowReconciler.GangSchedulingInterface = gangInter
-	kubeflowReconciler.ReconcilerUtilInterface = utilInter
-
-	testReconciler := &TestReconciler{
-		KubeflowReconciler: *kubeflowReconciler,
-		DC:                 dummy_client,
+	r := &TestReconciler{
+		DC: dummy_client,
 	}
-	testReconciler.OverrideForKubeflowReconcilerInterface(testReconciler, testReconciler, testReconciler, testReconciler, testReconciler)
 
-	return testReconciler
+	// Generate Bare Components
+	jobR := common_reconciler.BareJobReconciler(dummy_client)
+	jobR.OverrideForJobInterface(r, r, r, r)
+
+	podR := common_reconciler.BarePodReconciler(dummy_client)
+	podR.OverrideForPodInterface(r, r, r)
+
+	svcR := common_reconciler.BareServiceReconciler(dummy_client)
+	svcR.OverrideForServiceInterface(r, r, r)
+
+	gangR := common_reconciler.BareVolcanoReconciler(dummy_client, nil, false)
+	gangR.OverrideForGangSchedulingInterface(r)
+
+	Log := log.Log
+	utilR := common_reconciler.BareUtilReconciler(nil, Log, scheme)
+	//kubeflowReconciler := common_reconciler.BareKubeflowReconciler()
+
+	r.JobReconciler = *jobR
+	r.PodReconciler = *podR
+	r.ServiceReconciler = *svcR
+	r.VolcanoReconciler = *gangR
+	r.ReconcilerUtil = *utilR
+
+	return r
+}
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+func (r *TestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = log.FromContext(ctx)
+
+	job, err := r.GetJob(ctx, req)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger := r.GetLogger(job)
+
+	if job.GetDeletionTimestamp() != nil {
+		return ctrl.Result{}, nil
+	}
+
+	scheme.Scheme.Default(job)
+
+	// Get rid of SatisfiedExpectation
+	replicasSpec, err := r.ExtractReplicasSpec(job)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	runPolicy, err := r.ExtractRunPolicy(job)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	status, err := r.ExtractJobStatus(job)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.ReconcileJob(ctx, job, replicasSpec, status, runPolicy)
+	if err != nil {
+		logger.Info("Reconcile Test Job error %v", err)
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (r *TestReconciler) GetReconcilerName() string {

@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -87,6 +87,17 @@ func setTypeNameToCamelCase(testJob *TestJob, typ TestReplicaType) {
 
 // SetDefaults_TestJob sets any unspecified values to defaults.
 func SetDefaults_TestJob(testjob *TestJob) {
+	// Set default RunPolicy
+	if testjob.Spec.RunPolicy == nil {
+		testjob.Spec.RunPolicy = &commonv1.RunPolicy{
+			CleanPodPolicy:          nil,
+			TTLSecondsAfterFinished: nil,
+			ActiveDeadlineSeconds:   nil,
+			BackoffLimit:            nil,
+			SchedulingPolicy:        nil,
+		}
+	}
+
 	// Set default cleanpod policy to Running.
 	if testjob.Spec.RunPolicy.CleanPodPolicy == nil {
 		running := commonv1.CleanPodPolicyRunning

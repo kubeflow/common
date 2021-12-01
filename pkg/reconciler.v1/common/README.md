@@ -6,19 +6,19 @@ To use the reconciler, following methods must be overridden according to the API
 
 ```go
 // GetJob returns the job that matches the request
-func (r *KubeflowJobReconciler) GetJob(ctx context.Context, req ctrl.Request) (client.Object, error)
+func (r *JobReconciler) GetJob(ctx context.Context, req ctrl.Request) (client.Object, error)
 
 // ExtractReplicasSpec extracts the ReplicasSpec map from this job
-func (r *KubeflowJobReconciler) ExtractReplicasSpec(job client.Object) (map[commonv1.ReplicaType]*commonv1.ReplicaSpec, error)
+func (r *JobReconciler) ExtractReplicasSpec(job client.Object) (map[commonv1.ReplicaType]*commonv1.ReplicaSpec, error)
 
 // ExtractRunPolicy extracts the RunPolicy from this job
-func (r *KubeflowJobReconciler) ExtractRunPolicy(job client.Object) (*commonv1.RunPolicy, error)
+func (r *JobReconciler) ExtractRunPolicy(job client.Object) (*commonv1.RunPolicy, error)
 
 // ExtractJobStatus extracts the JobStatus from this job
-func (r *KubeflowJobReconciler) ExtractJobStatus(job client.Object) (*commonv1.JobStatus, error)
+func (r *JobReconciler) ExtractJobStatus(job client.Object) (*commonv1.JobStatus, error)
 
 // IsMasterRole checks if Pod is the master Pod
-func (r *KubeflowJobReconciler) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool
+func (r *JobReconciler) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool
 ```
 
 A simple example can be found at `test_job/reconciler.v1/test_job/test_job_reconciler.go`.
