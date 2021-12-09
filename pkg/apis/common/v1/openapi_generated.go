@@ -509,6 +509,12 @@ func schema_pkg_apis_common_v1_RunPolicy(ref common.ReferenceCallback) common.Op
 							Format:      "",
 						},
 					},
+					"successPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"ttlSecondsAfterFinished": {
 						SchemaProps: spec.SchemaProps{
 							Description: "TTLSecondsAfterFinished is the TTL to clean up jobs. It may take extra ReconcilePeriod seconds for the cleanup, since reconcile gets called periodically. Default to infinite.",

@@ -178,6 +178,8 @@ type RunPolicy struct {
 	// Default to Running.
 	CleanPodPolicy *CleanPodPolicy `json:"cleanPodPolicy,omitempty"`
 
+	SuccessPolicy *SuccessPolicy `json:"successPolicy,omitempty"`
+
 	// TTLSecondsAfterFinished is the TTL to clean up jobs.
 	// It may take extra ReconcilePeriod seconds for the cleanup, since
 	// reconcile gets called periodically.
@@ -197,6 +199,13 @@ type RunPolicy struct {
 	// +optional
 	SchedulingPolicy *SchedulingPolicy `json:"schedulingPolicy,omitempty"`
 }
+
+type SuccessPolicy string
+
+const (
+	SuccessPolicyDefault    SuccessPolicy = ""
+	SuccessPolicyAllWorkers SuccessPolicy = "AllWorkers"
+)
 
 // +k8s:openapi-gen=true
 // SchedulingPolicy encapsulates various scheduling policies of the distributed training
