@@ -69,6 +69,16 @@ func (r *VolcanoReconciler) GetGangSchedulerName() string {
 	return "volcano"
 }
 
+// GangSchedulingEnabled returns if gang-scheduling is enabled for all jobs
+func (r *VolcanoReconciler) GangSchedulingEnabled() bool {
+	return r.BaseGangReconciler.GangSchedulingEnabled()
+}
+
+// GetPodGroupName returns the name of PodGroup for this job
+func (r *VolcanoReconciler) GetPodGroupName(job client.Object) string {
+	return r.BaseGangReconciler.GetPodGroupName(job)
+}
+
 // GetPodGroupForJob returns the PodGroup associated with this job
 func (r *VolcanoReconciler) GetPodGroupForJob(ctx context.Context, job client.Object) (client.Object, error) {
 	var pg *volcano.PodGroup = nil

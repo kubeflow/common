@@ -52,16 +52,16 @@ var (
 	})
 )
 
-// KubeflowPodReconciler defines a Pod Reconciler for KubeflowJob
-type KubeflowPodReconciler struct {
+// PodReconciler defines a Pod Reconciler for generic training job
+type PodReconciler struct {
 	client.Client
 	ReconcilerUtilInterface
 	GangSchedulingInterface
 	JobInterface
 }
 
-// OverrideForPodInterface resets ReconcilerUtilInterface, GangSchedulingInterface, JobInterface for KubeflowPodReconciler
-func (r *KubeflowPodReconciler) OverrideForPodInterface(ui ReconcilerUtilInterface, gi GangSchedulingInterface, ji JobInterface) {
+// OverrideForPodInterface resets ReconcilerUtilInterface, GangSchedulingInterface, JobInterface for PodReconciler
+func (r *PodReconciler) OverrideForPodInterface(ui ReconcilerUtilInterface, gi GangSchedulingInterface, ji JobInterface) {
 	if ui != nil {
 		r.ReconcilerUtilInterface = ui
 	}
@@ -73,32 +73,32 @@ func (r *KubeflowPodReconciler) OverrideForPodInterface(ui ReconcilerUtilInterfa
 	}
 }
 
-// BareKubeflowPodReconciler returns a pointer of BareKubeflowPodReconciler with minimal implementation
-func BareKubeflowPodReconciler(client client.Client) *KubeflowPodReconciler {
-	return &KubeflowPodReconciler{Client: client}
+// BarePodReconciler returns a pointer of BarePodReconciler with minimal implementation
+func BarePodReconciler(client client.Client) *PodReconciler {
+	return &PodReconciler{Client: client}
 }
 
 // GenPodName returns the name of the Pod based on jobName, replicaType and its index
-func (r *KubeflowPodReconciler) GenPodName(jobName string, rtype string, index string) string {
+func (r *PodReconciler) GenPodName(jobName string, rtype string, index string) string {
 	return core.GenGeneralName(jobName, rtype, index)
 }
 
 // GetDefaultContainerName returns the default name of the container
-func (r *KubeflowPodReconciler) GetDefaultContainerName() string {
+func (r *PodReconciler) GetDefaultContainerName() string {
 	return DefaultContainerName
 }
 
 // GetPodsForJob returns all Pods associated with this job
-func (r *KubeflowPodReconciler) GetPodsForJob(ctx context.Context, job client.Object) ([]*corev1.Pod, error) {
+func (r *PodReconciler) GetPodsForJob(ctx context.Context, job client.Object) ([]*corev1.Pod, error) {
 	podList := &corev1.PodList{}
 	err := r.List(ctx, podList, client.MatchingLabels(r.GenLabels(job.GetName())))
 	if err != nil {
 		return nil, err
 	}
 
-	var pods []*corev1.Pod = nil
-	for _, pod := range podList.Items {
-		pods = append(pods, &pod)
+	var pods []*corev1.Pod
+	for idx := range podList.Items {
+		pods = append(pods, &podList.Items[idx])
 	}
 
 	return pods, nil
@@ -106,17 +106,17 @@ func (r *KubeflowPodReconciler) GetPodsForJob(ctx context.Context, job client.Ob
 }
 
 // GetPodSlices generates podSlice from all Pods listed for this job
-func (r *KubeflowPodReconciler) GetPodSlices(pods []*corev1.Pod, replicas int, logger *log.Entry) [][]*corev1.Pod {
+func (r *PodReconciler) GetPodSlices(pods []*corev1.Pod, replicas int, logger *log.Entry) [][]*corev1.Pod {
 	return core.GetPodSlices(pods, replicas, logger)
 }
 
 // FilterPodsForReplicaType filters out Pods for this replicaType
-func (r *KubeflowPodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType string) ([]*corev1.Pod, error) {
+func (r *PodReconciler) FilterPodsForReplicaType(pods []*corev1.Pod, replicaType string) ([]*corev1.Pod, error) {
 	return core.FilterPodsForReplicaType(pods, replicaType)
 }
 
 // ReconcilePods reconciles Pods for this job
-func (r *KubeflowPodReconciler) ReconcilePods(
+func (r *PodReconciler) ReconcilePods(
 	ctx context.Context,
 	job client.Object,
 	jobStatus *commonv1.JobStatus,
@@ -198,7 +198,7 @@ func (r *KubeflowPodReconciler) ReconcilePods(
 }
 
 // CreateNewPod generate Pods for this job and submits creation request to APIServer
-func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rt string, index string,
+func (r *PodReconciler) CreateNewPod(job client.Object, rt string, index string,
 	spec *commonv1.ReplicaSpec, masterRole bool, replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec) error {
 
 	logger := commonutil.LoggerForReplica(job, rt)
@@ -260,7 +260,7 @@ func (r *KubeflowPodReconciler) CreateNewPod(job client.Object, rt string, index
 }
 
 // DeletePod delete a Pod specified by name and namespace
-func (r *KubeflowPodReconciler) DeletePod(ctx context.Context, ns string, name string) error {
+func (r *PodReconciler) DeletePod(ctx context.Context, ns string, name string) error {
 	pod := &corev1.Pod{}
 	pod.Name = name
 	pod.Namespace = ns
@@ -272,7 +272,7 @@ func (r *KubeflowPodReconciler) DeletePod(ctx context.Context, ns string, name s
 }
 
 // DecoratePod decorates podTemplate before a Pod is submitted to the APIServer
-func (r *KubeflowPodReconciler) DecoratePod(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object) {
+func (r *PodReconciler) DecoratePod(rtype string, podTemplate *corev1.PodTemplateSpec, job client.Object) {
 	// Default implementation applies nothing to podTemplate
 	return
 }

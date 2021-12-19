@@ -60,12 +60,12 @@ const (
 	ErrReconcileGangTemplate                     = "ReconcilePodGroups error %v"
 	ErrGetReplicasStatusFromStatusFailedTemplate = "failed to get ReplicasStatus for %s from status"
 
-	WarnDefaultImplementationTemplate = "Warning: executing default implementation for KubeflowReconciler.%s"
+	WarnDefaultImplementationTemplate = "Warning: executing default implementation for JobReconciler.%s"
 	WarnNotCountedInBackoffLimit      = "The restart policy of replica %v of the job %v is not OnFailure or Always. Not counted in backoff limit."
 )
 
-// KubeflowJobReconciler defines a Reconciler dealing with KubeflowJob
-type KubeflowJobReconciler struct {
+// JobReconciler defines a Reconciler dealing with generic training job
+type JobReconciler struct {
 	client.Client
 	ReconcilerUtilInterface
 	PodInterface
@@ -74,16 +74,16 @@ type KubeflowJobReconciler struct {
 	counter *commonutil.Counter
 }
 
-// BareKubeflowJobReconciler returns the pointer of a KubeflowJobReconciler with minimal implementation
-func BareKubeflowJobReconciler(client client.Client) *KubeflowJobReconciler {
-	return &KubeflowJobReconciler{
+// BareJobReconciler returns the pointer of a JobReconciler with minimal implementation
+func BareJobReconciler(client client.Client) *JobReconciler {
+	return &JobReconciler{
 		Client:  client,
 		counter: commonutil.NewCounter(),
 	}
 }
 
-// OverrideForJobInterface resets ReconcilerUtilInterface, PodInterface, ServiceInterface, GangSchedulingInterface used in KubeflowJobReconciler
-func (r *KubeflowJobReconciler) OverrideForJobInterface(ui ReconcilerUtilInterface, pi PodInterface, si ServiceInterface, gi GangSchedulingInterface) {
+// OverrideForJobInterface resets ReconcilerUtilInterface, PodInterface, ServiceInterface, GangSchedulingInterface used in JobReconciler
+func (r *JobReconciler) OverrideForJobInterface(ui ReconcilerUtilInterface, pi PodInterface, si ServiceInterface, gi GangSchedulingInterface) {
 	if ui != nil {
 		r.ReconcilerUtilInterface = ui
 	}
@@ -98,8 +98,8 @@ func (r *KubeflowJobReconciler) OverrideForJobInterface(ui ReconcilerUtilInterfa
 	}
 }
 
-// GenLabels returns labels used for this job (based on the name of this KubeflowJob)
-func (r *KubeflowJobReconciler) GenLabels(jobName string) map[string]string {
+// GenLabels returns labels used for this job (based on the name of this generic training job)
+func (r *JobReconciler) GenLabels(jobName string) map[string]string {
 	jobName = strings.Replace(jobName, "/", "-", -1)
 	return map[string]string{
 		// TODO(#149): Remove deprecated labels.
@@ -110,13 +110,13 @@ func (r *KubeflowJobReconciler) GenLabels(jobName string) map[string]string {
 	}
 }
 
-// GetGroupNameLabelValue returns the Group Name for the KubeflowJob, which is "kubeflow.org"
-func (r *KubeflowJobReconciler) GetGroupNameLabelValue() string {
+// GetGroupNameLabelValue returns the Group Name for the generic training job, which is "kubeflow.org"
+func (r *JobReconciler) GetGroupNameLabelValue() string {
 	return GroupName
 }
 
-// ReconcileJob reconciles KubeflowJob
-func (r *KubeflowJobReconciler) ReconcileJob(
+// ReconcileJob reconciles generic training job
+func (r *JobReconciler) ReconcileJob(
 	ctx context.Context,
 	job client.Object,
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
@@ -262,26 +262,26 @@ func (r *KubeflowJobReconciler) ReconcileJob(
 	return nil
 }
 
-// DeleteJob deletes this KubeflowJob
-func (r *KubeflowJobReconciler) DeleteJob(job client.Object) error {
+// DeleteJob deletes this generic training job
+func (r *JobReconciler) DeleteJob(job client.Object) error {
 	return r.Delete(context.Background(), job)
 }
 
 // RecordAbnormalPods records abnormal pods during the reconciliation of jobs
-func (r *KubeflowJobReconciler) RecordAbnormalPods(activePods []*corev1.Pod, object client.Object) {
+func (r *JobReconciler) RecordAbnormalPods(activePods []*corev1.Pod, object client.Object) {
 	core.RecordAbnormalPods(activePods, object, r.GetRecorder())
 }
 
 // SetStatusForSuccessJob sets the status for job that succeed
-func (r *KubeflowJobReconciler) SetStatusForSuccessJob(status *commonv1.JobStatus) {
+func (r *JobReconciler) SetStatusForSuccessJob(status *commonv1.JobStatus) {
 	for rytpe := range status.ReplicaStatuses {
 		status.ReplicaStatuses[rytpe].Succeeded += status.ReplicaStatuses[rytpe].Active
 		status.ReplicaStatuses[rytpe].Active = 0
 	}
 }
 
-// UpdateJobStatus updates the status of this KubeflowJob WITHOUT pushing the updated status to the APIServer
-func (r *KubeflowJobReconciler) UpdateJobStatus(
+// UpdateJobStatus updates the status of this generic training job WITHOUT pushing the updated status to the APIServer
+func (r *JobReconciler) UpdateJobStatus(
 	job client.Object,
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
 	jobStatus *commonv1.JobStatus) error {
@@ -371,13 +371,13 @@ func (r *KubeflowJobReconciler) UpdateJobStatus(
 	return nil
 }
 
-// UpdateJobStatusInAPIServer updates the status of this KubeflowJob in APIServer
-func (r *KubeflowJobReconciler) UpdateJobStatusInAPIServer(ctx context.Context, job client.Object) error {
+// UpdateJobStatusInAPIServer updates the status of this generic training job in APIServer
+func (r *JobReconciler) UpdateJobStatusInAPIServer(ctx context.Context, job client.Object) error {
 	return r.Status().Update(ctx, job)
 }
 
-// CleanupResources cleans up all resources associated with this KubeflowJob
-func (r *KubeflowJobReconciler) CleanupResources(runPolicy *commonv1.RunPolicy, status commonv1.JobStatus, job client.Object) error {
+// CleanupResources cleans up all resources associated with this generic training job
+func (r *JobReconciler) CleanupResources(runPolicy *commonv1.RunPolicy, status commonv1.JobStatus, job client.Object) error {
 	if *runPolicy.CleanPodPolicy == commonv1.CleanPodPolicyNone {
 		return nil
 	}
@@ -418,8 +418,8 @@ func (r *KubeflowJobReconciler) CleanupResources(runPolicy *commonv1.RunPolicy, 
 	return nil
 }
 
-// CleanupJob cleans up all resources associated with this KubeflowJob as well as the job itself
-func (r *KubeflowJobReconciler) CleanupJob(runPolicy *commonv1.RunPolicy, status commonv1.JobStatus, job client.Object) error {
+// CleanupJob cleans up all resources associated with this generic training job as well as the job itself
+func (r *JobReconciler) CleanupJob(runPolicy *commonv1.RunPolicy, status commonv1.JobStatus, job client.Object) error {
 	currentTime := time.Now()
 
 	ttl := runPolicy.TTLSecondsAfterFinished
@@ -447,54 +447,54 @@ func (r *KubeflowJobReconciler) CleanupJob(runPolicy *commonv1.RunPolicy, status
 	return nil
 }
 
-// IsFlagReplicaTypeForJobStatus checks if this replicaType is the flag replicaType for the status of KubeflowJob
-func (r *KubeflowJobReconciler) IsFlagReplicaTypeForJobStatus(rtype string) bool {
+// IsFlagReplicaTypeForJobStatus checks if this replicaType is the flag replicaType for the status of generic training job
+func (r *JobReconciler) IsFlagReplicaTypeForJobStatus(rtype string) bool {
 	logrus.Warnf(WarnDefaultImplementationTemplate, "IsFlagReplicaTypeForJobStatus")
 	return true
 }
 
-// IsJobSucceeded checks if this KubeflowJob succeeded
-func (r *KubeflowJobReconciler) IsJobSucceeded(status commonv1.JobStatus) bool {
+// IsJobSucceeded checks if this generic training job succeeded
+func (r *JobReconciler) IsJobSucceeded(status commonv1.JobStatus) bool {
 	return commonutil.IsSucceeded(status)
 }
 
-// IsJobFailed checks if this KubeflowJob failed
-func (r *KubeflowJobReconciler) IsJobFailed(status commonv1.JobStatus) bool {
+// IsJobFailed checks if this generic training job failed
+func (r *JobReconciler) IsJobFailed(status commonv1.JobStatus) bool {
 	return commonutil.IsFailed(status)
 }
 
-// ShouldCleanUp checks if resources associated with this KubeflowJob should be cleaned up
-func (r *KubeflowJobReconciler) ShouldCleanUp(status commonv1.JobStatus) bool {
+// ShouldCleanUp checks if resources associated with this generic training job should be cleaned up
+func (r *JobReconciler) ShouldCleanUp(status commonv1.JobStatus) bool {
 	return r.IsJobSucceeded(status) || r.IsJobFailed(status)
 }
 
-// PastBackoffLimit checks if this KubeflowJob has past backoff limit
-func (r *KubeflowJobReconciler) PastBackoffLimit(jobName string, runPolicy *commonv1.RunPolicy,
+// PastBackoffLimit checks if this generic training job has past backoff limit
+func (r *JobReconciler) PastBackoffLimit(jobName string, runPolicy *commonv1.RunPolicy,
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, pods []*corev1.Pod) (bool, error) {
 	return core.PastBackoffLimit(jobName, runPolicy, replicas, pods, r.FilterPodsForReplicaType)
 }
 
-// PastActiveDeadline checks if this KubeflowJob has ActiveDeadlineSeconds field set and if it is exceeded.
-func (r *KubeflowJobReconciler) PastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus *commonv1.JobStatus) bool {
+// PastActiveDeadline checks if this generic training job has ActiveDeadlineSeconds field set and if it is exceeded.
+func (r *JobReconciler) PastActiveDeadline(runPolicy *commonv1.RunPolicy, jobStatus *commonv1.JobStatus) bool {
 	return core.PastActiveDeadline(runPolicy, *jobStatus)
 }
 
-func (r *KubeflowJobReconciler) GetJob(ctx context.Context, req ctrl.Request) (client.Object, error) {
+func (r *JobReconciler) GetJob(ctx context.Context, req ctrl.Request) (client.Object, error) {
 	panic("implement me")
 }
 
-func (r *KubeflowJobReconciler) ExtractReplicasSpec(job client.Object) (map[commonv1.ReplicaType]*commonv1.ReplicaSpec, error) {
+func (r *JobReconciler) ExtractReplicasSpec(job client.Object) (map[commonv1.ReplicaType]*commonv1.ReplicaSpec, error) {
 	panic("implement me")
 }
 
-func (r *KubeflowJobReconciler) ExtractRunPolicy(job client.Object) (*commonv1.RunPolicy, error) {
+func (r *JobReconciler) ExtractRunPolicy(job client.Object) (*commonv1.RunPolicy, error) {
 	panic("implement me")
 }
 
-func (r *KubeflowJobReconciler) ExtractJobStatus(job client.Object) (*commonv1.JobStatus, error) {
+func (r *JobReconciler) ExtractJobStatus(job client.Object) (*commonv1.JobStatus, error) {
 	panic("implement me")
 }
 
-func (r *KubeflowJobReconciler) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool {
+func (r *JobReconciler) IsMasterRole(replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec, rtype commonv1.ReplicaType, index int) bool {
 	panic("implement me")
 }
