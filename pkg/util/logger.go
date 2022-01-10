@@ -23,11 +23,19 @@ import (
 	metav1unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+func GetNamespaceWithDefault(job metav1.Object) string {
+	ns := metav1.NamespaceDefault
+	if job.GetNamespace() != "" {
+		ns = job.GetNamespace()
+	}
+	return ns
+}
+
 func LoggerForReplica(job metav1.Object, rtype string) *log.Entry {
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// Its more common in K8s to use a period to indicate namespace.name. So that's what we use.
-		"job":          job.GetNamespace() + "." + job.GetName(),
+		"job":          GetNamespaceWithDefault(job) + "." + job.GetName(),
 		"uid":          job.GetUID(),
 		"replica-type": rtype,
 	})
@@ -37,40 +45,46 @@ func LoggerForJob(job metav1.Object) *log.Entry {
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// Its more common in K8s to use a period to indicate namespace.name. So that's what we use.
-		"job": job.GetNamespace() + "." + job.GetName(),
+		"job": GetNamespaceWithDefault(job) + "." + job.GetName(),
 		"uid": job.GetUID(),
 	})
 }
 
 func LoggerForPod(pod *v1.Pod, kind string) *log.Entry {
 	job := ""
-	if controllerRef := metav1.GetControllerOf(pod); controllerRef != nil {
-		if controllerRef.Kind == kind {
-			job = pod.Namespace + "." + controllerRef.Name
+	if ownerReference := pod.GetOwnerReferences(); ownerReference != nil {
+		for _, or := range ownerReference {
+			if or.Kind == kind {
+				job = GetNamespaceWithDefault(pod) + "." + or.Kind
+				break
+			}
 		}
 	}
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// In controller.go we log the key used with the workqueue.
 		"job": job,
-		"pod": pod.Namespace + "." + pod.Name,
-		"uid": pod.ObjectMeta.UID,
+		"pod": GetNamespaceWithDefault(pod) + "." + pod.GetName(),
+		"uid": pod.GetUID(),
 	})
 }
 
 func LoggerForService(svc *v1.Service, kind string) *log.Entry {
 	job := ""
-	if controllerRef := metav1.GetControllerOf(svc); controllerRef != nil {
-		if controllerRef.Kind == kind {
-			job = svc.Namespace + "." + controllerRef.Name
+	if ownerReference := svc.GetOwnerReferences(); ownerReference != nil {
+		for _, or := range ownerReference {
+			if or.Kind == kind {
+				job = GetNamespaceWithDefault(svc) + "." + or.Kind
+				break
+			}
 		}
 	}
 	return log.WithFields(log.Fields{
 		// We use job to match the key used in controller.go
 		// In controller.go we log the key used with the workqueue.
 		"job":     job,
-		"service": svc.Namespace + "." + svc.Name,
-		"uid":     svc.ObjectMeta.UID,
+		"service": GetNamespaceWithDefault(svc) + "." + svc.GetName(),
+		"uid":     svc.GetUID(),
 	})
 }
 
