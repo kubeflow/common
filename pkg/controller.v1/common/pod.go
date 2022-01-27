@@ -41,8 +41,6 @@ import (
 )
 
 const (
-	// gang scheduler name.
-	gangSchedulerName = "volcano"
 	// podTemplateRestartPolicyReason is the warning reason when the restart
 	// policy is set in pod template.
 	podTemplateRestartPolicyReason = "SettedPodTemplateRestartPolicy"
@@ -51,8 +49,6 @@ const (
 	// podTemplateSchedulerNameReason is the warning reason when other scheduler name is set
 	// in pod templates with gang-scheduling enabled
 	podTemplateSchedulerNameReason = "SettedPodTemplateSchedulerName"
-	// gangSchedulingPodGroupAnnotation is the annotation key used by batch schedulers
-	gangSchedulingPodGroupAnnotation = "scheduling.k8s.io/group-name"
 )
 
 var (
@@ -426,22 +422,13 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 	// if gang-scheduling is enabled:
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
 	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "volcano".
-	if jc.Config.EnableGangScheduling {
-		if isNonGangSchedulerSet(replicas) {
+	if jc.Config.EnableGangScheduling() {
+		if isCustomSchedulerSet(replicas, jc.PodGroupControl.GetSchedulerName()) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
 			logger.Warning(errMsg)
 			jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
-		} else {
-			podTemplate.Spec.SchedulerName = gangSchedulerName
 		}
-
-		if podTemplate.Annotations == nil {
-			podTemplate.Annotations = map[string]string{}
-		}
-
-		if jc.Config.EnableGangScheduling {
-			podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = metaObject.GetName()
-		}
+		jc.PodGroupControl.DecoratePodTemplateSpec(podTemplate, metaObject, rt)
 	}
 
 	// Creation is expected when there is no error returned
@@ -471,7 +458,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 	return nil
 }
 
-func isNonGangSchedulerSet(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) bool {
+func isCustomSchedulerSet(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, gangSchedulerName string) bool {
 	for _, spec := range replicas {
 		if spec.Template.Spec.SchedulerName != "" && spec.Template.Spec.SchedulerName != gangSchedulerName {
 			return true

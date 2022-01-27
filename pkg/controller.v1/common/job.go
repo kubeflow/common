@@ -1,3 +1,19 @@
+/*
+Copyright 2023 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package common
 
 import (
@@ -12,14 +28,16 @@ import (
 	"github.com/kubeflow/common/pkg/util/k8sutil"
 
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
+	"k8s.io/klog/v2"
+	schedulerpluginsv1alpha1 "sigs.k8s.io/scheduler-plugins/apis/scheduling/v1alpha1"
+	volcanov1beta1 "volcano.sh/apis/pkg/apis/scheduling/v1beta1"
 )
 
-func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job interface{}, pods []*v1.Pod) error {
+func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job interface{}, pods []*corev1.Pod) error {
 	if len(pods) == 0 {
 		return nil
 	}
@@ -33,7 +51,7 @@ func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 		// Note that pending pod will turn into running once schedulable,
 		// not cleaning it may leave orphan running pod in the future,
 		// we should treat it equivalent to running phase here.
-		if *runPolicy.CleanPodPolicy == apiv1.CleanPodPolicyRunning && pod.Status.Phase != v1.PodRunning && pod.Status.Phase != v1.PodPending {
+		if *runPolicy.CleanPodPolicy == apiv1.CleanPodPolicyRunning && pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodPending {
 			continue
 		}
 		if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, job.(runtime.Object)); err != nil {
@@ -48,7 +66,7 @@ func (jc *JobController) DeletePodsAndServices(runPolicy *apiv1.RunPolicy, job i
 }
 
 // recordAbnormalPods records the active pod whose latest condition is not in True status.
-func (jc *JobController) recordAbnormalPods(activePods []*v1.Pod, object runtime.Object) {
+func (jc *JobController) recordAbnormalPods(activePods []*corev1.Pod, object runtime.Object) {
 	core.RecordAbnormalPods(activePods, object, jc.Recorder)
 }
 
@@ -71,7 +89,7 @@ func (jc *JobController) ReconcileJobs(
 	}
 	jobKey, err := KeyFunc(job)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("Couldn't get key for job object %#v: %v", job, err))
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
 		return err
 	}
 	// Reset expectations
@@ -101,13 +119,13 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		if jc.Config.EnableGangScheduling {
-			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
+		if jc.Config.EnableGangScheduling() {
+			jc.Recorder.Event(runtimeObject, corev1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
 			if err := jc.DeletePodGroup(metaObject); err != nil {
-				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
+				jc.Recorder.Eventf(runtimeObject, corev1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
 				return err
 			} else {
-				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
+				jc.Recorder.Eventf(runtimeObject, corev1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
 			}
 		}
 
@@ -141,7 +159,7 @@ func (jc *JobController) ReconcileJobs(
 	jc.recordAbnormalPods(activePods, runtimeObject)
 
 	active := int32(len(activePods))
-	failed := k8sutil.FilterPodCount(pods, v1.PodFailed)
+	failed := k8sutil.FilterPodCount(pods, corev1.PodFailed)
 	totalReplicas := k8sutil.GetTotalReplicas(replicas)
 	prevReplicasFailedNum := k8sutil.GetTotalFailedReplicas(jobStatus.ReplicaStatuses)
 
@@ -191,17 +209,17 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		if jc.Config.EnableGangScheduling {
-			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
+		if jc.Config.EnableGangScheduling() {
+			jc.Recorder.Event(runtimeObject, corev1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
 			if err := jc.DeletePodGroup(metaObject); err != nil {
-				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
+				jc.Recorder.Eventf(runtimeObject, corev1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
 				return err
 			} else {
-				jc.Recorder.Eventf(runtimeObject, v1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
+				jc.Recorder.Eventf(runtimeObject, corev1.EventTypeNormal, "SuccessfulDeletePodGroup", "Deleted PodGroup: %v", jobName)
 			}
 		}
 
-		jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
+		jc.Recorder.Event(runtimeObject, corev1.EventTypeNormal, commonutil.JobFailedReason, failureMessage)
 
 		if err := commonutil.UpdateJobConditions(&jobStatus, apiv1.JobFailed, commonutil.JobFailedReason, failureMessage); err != nil {
 			log.Infof("Append job condition error: %v", err)
@@ -211,11 +229,11 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	} else {
 		// General cases which need to reconcile
-		if jc.Config.EnableGangScheduling {
+		if jc.Config.EnableGangScheduling() {
 			minMember := totalReplicas
 			queue := ""
 			priorityClass := ""
-			var minResources *v1.ResourceList
+			var minResources *corev1.ResourceList
 
 			if runPolicy.SchedulingPolicy != nil {
 				if runPolicy.SchedulingPolicy.MinAvailable != nil {
@@ -239,22 +257,48 @@ func (jc *JobController) ReconcileJobs(
 				minResources = jc.calcPGMinResources(minMember, replicas)
 			}
 
-			pgSpec := v1beta1.PodGroupSpec{
-				MinMember:         minMember,
-				Queue:             queue,
-				PriorityClassName: priorityClass,
-				MinResources:      minResources,
+			var pgSpecFill FillPodGroupSpecFunc = nil
+			switch jc.Config.GangScheduling {
+			case GangSchedulerVolcano:
+				pgSpecFill = func(pg metav1.Object) error {
+					volcanoPodGroup, match := pg.(*volcanov1beta1.PodGroup)
+					if !match {
+						return fmt.Errorf("unable recognize PodGroup: %v", klog.KObj(pg))
+					}
+					volcanoPodGroup.Spec = volcanov1beta1.PodGroupSpec{
+						MinMember:         minMember,
+						Queue:             queue,
+						PriorityClassName: priorityClass,
+						MinResources:      minResources,
+					}
+					pg = volcanoPodGroup
+					return nil
+				}
+			case GangSchedulerSchedulerPlugins:
+				pgSpecFill = func(pg metav1.Object) error {
+					schedulerPluginsPodGroup, match := pg.(*schedulerpluginsv1alpha1.PodGroup)
+					if !match {
+						return fmt.Errorf("unable recognize PodGroup: %v", klog.KObj(pg))
+					}
+					schedulerPluginsPodGroup.Spec = schedulerpluginsv1alpha1.PodGroupSpec{
+						MinMember:              minMember,
+						MinResources:           *minResources,
+						ScheduleTimeoutSeconds: nil,
+					}
+					pg = schedulerPluginsPodGroup
+					return nil
+				}
 			}
 
 			syncReplicas := true
-			pg, err := jc.SyncPodGroup(metaObject, pgSpec)
+			pg, err := jc.SyncPodGroup(metaObject, pgSpecFill)
 			if err != nil {
 				log.Warnf("Sync PodGroup %v: %v", jobKey, err)
 				syncReplicas = false
 			}
 
-			// Delay pods creation until podgroup status is inqueue
-			if pg == nil || pg.Status.Phase == "" || pg.Status.Phase == v1beta1.PodGroupPending {
+			// Delay pods creation until PodGroup status is Inqueue
+			if jc.PodGroupControl.DelayPodCreationDueToPodGroup(pg) {
 				log.Warnf("PodGroup %v unschedulable", jobKey)
 				syncReplicas = false
 			}
@@ -315,7 +359,7 @@ func (jc *JobController) PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatu
 // PastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
 // this method applies only to pods when restartPolicy is one of OnFailure, Always or ExitCode
 func (jc *JobController) PastBackoffLimit(jobName string, runPolicy *apiv1.RunPolicy,
-	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*v1.Pod) (bool, error) {
+	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pods []*corev1.Pod) (bool, error) {
 	return core.PastBackoffLimit(jobName, runPolicy, replicas, pods, jc.FilterPodsForReplicaType)
 }
 
@@ -354,6 +398,6 @@ func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 	}
 }
 
-func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) *v1.ResourceList {
+func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) *corev1.ResourceList {
 	return CalcPGMinResources(minMember, replicas, jc.PriorityClassLister.Get)
 }
