@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"time"
 
+	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
+
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
 	"github.com/kubeflow/common/pkg/core"
@@ -101,7 +103,7 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		if jc.Config.EnableGangScheduling {
+		if jc.Config.EnableGangScheduling() {
 			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
 			if err := jc.DeletePodGroup(metaObject); err != nil {
 				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
@@ -191,7 +193,7 @@ func (jc *JobController) ReconcileJobs(
 			return err
 		}
 
-		if jc.Config.EnableGangScheduling {
+		if jc.Config.EnableGangScheduling() {
 			jc.Recorder.Event(runtimeObject, v1.EventTypeNormal, "JobTerminated", "Job has been terminated. Deleting PodGroup")
 			if err := jc.DeletePodGroup(metaObject); err != nil {
 				jc.Recorder.Eventf(runtimeObject, v1.EventTypeWarning, "FailedDeletePodGroup", "Error deleting: %v", err)
@@ -211,7 +213,7 @@ func (jc *JobController) ReconcileJobs(
 		return jc.Controller.UpdateJobStatusInApiServer(job, &jobStatus)
 	} else {
 		// General cases which need to reconcile
-		if jc.Config.EnableGangScheduling {
+		if jc.Config.EnableGangScheduling() {
 			minMember := totalReplicas
 			queue := ""
 			priorityClass := ""
@@ -239,22 +241,42 @@ func (jc *JobController) ReconcileJobs(
 				minResources = jc.calcPGMinResources(minMember, replicas)
 			}
 
-			pgSpec := v1beta1.PodGroupSpec{
-				MinMember:         minMember,
-				Queue:             queue,
-				PriorityClassName: priorityClass,
-				MinResources:      minResources,
+			var pgSpecFill PGFillSpecFunc = nil
+			switch jc.Config.GangScheduling {
+			case GangSchedulerVolcano:
+				pgSpecFill = func(pg metav1.Object) error {
+					volcanoPodGroup := pg.(*v1beta1.PodGroup)
+					volcanoPodGroup.Spec = v1beta1.PodGroupSpec{
+						MinMember:         minMember,
+						Queue:             queue,
+						PriorityClassName: priorityClass,
+						MinResources:      minResources,
+					}
+					pg = volcanoPodGroup
+					return nil
+				}
+			case GangSchedulerSchedulerPlugins:
+				pgSpecFill = func(pg metav1.Object) error {
+					schedulerPluginsPodGroup := pg.(*v1alpha1.PodGroup)
+					schedulerPluginsPodGroup.Spec = v1alpha1.PodGroupSpec{
+						MinMember:              minMember,
+						MinResources:           minResources,
+						ScheduleTimeoutSeconds: nil,
+					}
+					pg = schedulerPluginsPodGroup
+					return nil
+				}
 			}
 
 			syncReplicas := true
-			pg, err := jc.SyncPodGroup(metaObject, pgSpec)
+			pg, err := jc.SyncPodGroup(metaObject, pgSpecFill)
 			if err != nil {
 				log.Warnf("Sync PodGroup %v: %v", jobKey, err)
 				syncReplicas = false
 			}
 
-			// Delay pods creation until podgroup status is inqueue
-			if pg == nil || pg.Status.Phase == "" || pg.Status.Phase == v1beta1.PodGroupPending {
+			// Delay pods creation until PodGroup status is Inqueue
+			if jc.PodGroupControl.DelayPodCreationDueToPodGroup(pg) {
 				log.Warnf("PodGroup %v unschedulable", jobKey)
 				syncReplicas = false
 			}
