@@ -423,7 +423,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
 	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "volcano" or "scheduler-plugins-scheduler".
 	if jc.Config.EnableGangScheduling() {
-		if isAnotherGangSchedulerSet(replicas, jc.PodGroupControl.GetSchedulerName()) {
+		if isCustomSchedulerSet(replicas, jc.PodGroupControl.GetSchedulerName()) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
 			logger.Warning(errMsg)
 			jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
@@ -458,7 +458,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 	return nil
 }
 
-func isAnotherGangSchedulerSet(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, gangSchedulerName string) bool {
+func isCustomSchedulerSet(replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, gangSchedulerName string) bool {
 	for _, spec := range replicas {
 		if spec.Template.Spec.SchedulerName != "" && spec.Template.Spec.SchedulerName != gangSchedulerName {
 			return true

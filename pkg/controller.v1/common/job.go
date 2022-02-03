@@ -241,7 +241,7 @@ func (jc *JobController) ReconcileJobs(
 				minResources = jc.calcPGMinResources(minMember, replicas)
 			}
 
-			var pgSpecFill PGFillSpecFunc = nil
+			var pgSpecFill FillPodGroupSpecFunc = nil
 			switch jc.Config.GangScheduling {
 			case GangSchedulerVolcano:
 				pgSpecFill = func(pg metav1.Object) error {

@@ -67,10 +67,10 @@ func TestSetRestartPolicy(t *testing.T) {
 	}
 }
 
-func TestIsAnotherGangSchedulerSet(t *testing.T) {
+func TestIsCustomSchedulerSet(t *testing.T) {
 	gangSchedulerName := "test-gang-scheduler"
 	replicaSpecs := map[apiv1.ReplicaType]*apiv1.ReplicaSpec{}
-	assert.False(t, isAnotherGangSchedulerSet(replicaSpecs, gangSchedulerName))
+	assert.False(t, isCustomSchedulerSet(replicaSpecs, gangSchedulerName))
 
 	replicaSpecs[apiv1.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &apiv1.ReplicaSpec{
 		Template: v1.PodTemplateSpec{
@@ -79,7 +79,7 @@ func TestIsAnotherGangSchedulerSet(t *testing.T) {
 			},
 		},
 	}
-	assert.False(t, isAnotherGangSchedulerSet(replicaSpecs, gangSchedulerName))
+	assert.False(t, isCustomSchedulerSet(replicaSpecs, gangSchedulerName))
 
 	replicaSpecs[apiv1.ReplicaType(testjobv1.TestReplicaTypeWorker)] = &apiv1.ReplicaSpec{
 		Template: v1.PodTemplateSpec{
@@ -88,7 +88,7 @@ func TestIsAnotherGangSchedulerSet(t *testing.T) {
 			},
 		},
 	}
-	assert.True(t, isAnotherGangSchedulerSet(replicaSpecs, gangSchedulerName))
+	assert.True(t, isCustomSchedulerSet(replicaSpecs, gangSchedulerName))
 }
 
 func TestCalculatePodSliceSize(t *testing.T) {

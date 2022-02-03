@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type PGFillSpecFunc func(object metav1.Object) error
+type FillPodGroupSpecFunc func(object metav1.Object) error
 
-func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc PGFillSpecFunc) (metav1.Object, error) {
+func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc FillPodGroupSpecFunc) (metav1.Object, error) {
 
 	pgctl := jc.PodGroupControl
 	// Check whether podGroup exists or not
