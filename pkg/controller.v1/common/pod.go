@@ -348,16 +348,15 @@ func (jc *JobController) ReconcilePods(
 				}
 			}
 			// Check if the pod is retryable.
-			if spec.RestartPolicy == apiv1.RestartPolicyExitCode {
-				if pod.Status.Phase == v1.PodFailed && trainutil.IsRetryableExitCode(exitCode) {
-					failedPodsCount.Inc()
-					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
-					if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject); err != nil {
-						return err
-					}
-					// Deletion is expected
-					jc.Expectations.RaiseExpectations(expectationPodsKey, 0, 1)
+			if pod.Status.Phase == v1.PodFailed && (spec.RestartPolicy == apiv1.RestartPolicyExitCode && trainutil.IsRetryableExitCode(exitCode) || spec.RestartPolicy == apiv1.RestartPolicyOnFailure || spec.RestartPolicy == apiv1.RestartPolicyAlways) {
+				failedPodsCount.Inc()
+				logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
+				if err := jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject); err != nil {
+					return err
 				}
+				// Deletion is expected
+				jc.Expectations.RaiseExpectations(expectationPodsKey, 0, 1)
+
 			}
 
 			updateJobReplicaStatuses(jobStatus, rType, pod)
