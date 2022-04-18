@@ -64,7 +64,7 @@ func RecordAbnormalPods(activePods []*v1.Pod, object runtime.Object, recorder re
 
 // PastActiveDeadline checks if job has ActiveDeadlineSeconds field set and if it is exceeded.
 func PastActiveDeadline(runPolicy *apiv1.RunPolicy, jobStatus apiv1.JobStatus) bool {
-	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil {
+	if runPolicy.ActiveDeadlineSeconds == nil || jobStatus.StartTime == nil || (runPolicy.Suspend != nil && *runPolicy.Suspend) {
 		return false
 	}
 	now := metav1.Now()
