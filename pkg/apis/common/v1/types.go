@@ -135,6 +135,17 @@ const (
 	// reached phase failed with no restarting.
 	// The training has failed its execution.
 	JobFailed JobConditionType = "Failed"
+
+	// JobSuspended means sub-resources (e.g. services/pods) of this job
+	// has been terminated.
+	JobSuspended JobConditionType = "Suspended"
+
+	// JobResumed means job Resumed from suspended
+	JobResumed JobConditionType = "Resumed"
+
+	// JobPartialSucceed means all sub-resources (e.g. services/pods) of this job's one worker
+	// reached phase have terminated in success.
+	JobPartialSucceeded JobConditionType = "PartialSucceeded"
 )
 
 // +k8s:openapi-gen=true
@@ -196,6 +207,17 @@ type RunPolicy struct {
 	// SchedulingPolicy defines the policy related to scheduling, e.g. gang-scheduling
 	// +optional
 	SchedulingPolicy *SchedulingPolicy `json:"schedulingPolicy,omitempty"`
+
+	// Suspend specifies whether the Job controller should create Pods or not. If
+	// a Job is created with suspend set to true, no Pods are created by the Job
+	// controller. If a Job is suspended after creation (i.e. the flag goes from
+	// false to true), the Job controller will delete all active Pods associated
+	// with this Job. Users must design their workload to gracefully handle this.
+	// Suspending a Job will reset the StartTime field of the Job, effectively
+	// resetting the ActiveDeadlineSeconds timer too.
+	// Defaults to false.
+	// +optional
+	Suspend *bool `json:"suspend,omitempty"`
 }
 
 // +k8s:openapi-gen=true

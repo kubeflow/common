@@ -64,7 +64,7 @@ type ControllerInterface interface {
 	// It will requeue the job in case of an error while creating/deleting pods.
 	// Common implementation will be provided and User can still override this to implement their own reconcile logic
 	ReconcilePods(job interface{}, jobStatus *JobStatus, pods []*v1.Pod, rtype ReplicaType, spec *ReplicaSpec,
-		replicas map[ReplicaType]*ReplicaSpec) error
+		replicas map[ReplicaType]*ReplicaSpec, runPolicy *RunPolicy) error
 
 	// ReconcileServices checks and updates services for each given ReplicaSpec.
 	// It will requeue the job in case of an error while creating/deleting services.

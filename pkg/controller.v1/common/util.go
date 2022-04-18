@@ -143,3 +143,9 @@ func CalcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.R
 
 	return &minAvailableTasksRes
 }
+
+// JobSuspended returns whether a Job is suspended while taking the feature
+// gate into account.
+func JobSuspended(runPolicy *apiv1.RunPolicy) bool {
+	return runPolicy.Suspend != nil && *runPolicy.Suspend
+}

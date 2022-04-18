@@ -17,7 +17,12 @@ const (
 	JobFailedReason = "JobFailed"
 	// JobRestarting is added in a job when it is restarting.
 	JobRestartingReason = "JobRestarting"
-
+	// JobSuspend is added in a job when it is been suspended.
+	JobSuspendedReason = "JobSuspended"
+	// JobResumed is added in when job Resumed.
+	JobResumedReason = "JobResumed"
+	// JobPartialSucceed is added in when job partial successed.
+	JobPartialSucceededReason = "JobPartialSucceeded"
 	// labels for pods and servers.
 
 )
@@ -30,6 +35,16 @@ func IsSucceeded(status apiv1.JobStatus) bool {
 // IsFailed checks if the job is failed
 func IsFailed(status apiv1.JobStatus) bool {
 	return hasCondition(status, apiv1.JobFailed)
+}
+
+// IsSuspended checks if the job is suspended
+func IsSuspended(status apiv1.JobStatus) bool {
+	return hasCondition(status, apiv1.JobSuspended)
+}
+
+// IsSuspended checks if the job is suspended
+func IsPartialSucceeded(status apiv1.JobStatus) bool {
+	return hasCondition(status, apiv1.JobPartialSucceeded)
 }
 
 // UpdateJobConditions adds to the jobStatus a new condition if needed, with the conditionType, reason, and message
@@ -103,7 +118,19 @@ func filterOutCondition(conditions []apiv1.JobCondition, condType apiv1.JobCondi
 		if condType == apiv1.JobRestarting && c.Type == apiv1.JobRunning {
 			continue
 		}
-		if condType == apiv1.JobRunning && c.Type == apiv1.JobRestarting {
+		if condType == apiv1.JobRunning && (c.Type == apiv1.JobRestarting || c.Type == apiv1.JobResumed) {
+			continue
+		}
+
+		if condType == apiv1.JobSuspended && c.Type == apiv1.JobResumed {
+			continue
+		}
+
+		if condType == apiv1.JobResumed && c.Type == apiv1.JobSuspended {
+			continue
+		}
+
+		if condType == apiv1.JobRestarting && c.Type == apiv1.JobPartialSucceeded {
 			continue
 		}
 
@@ -111,8 +138,9 @@ func filterOutCondition(conditions []apiv1.JobCondition, condType apiv1.JobCondi
 			continue
 		}
 
-		// Set the running condition status to be false when current condition failed or succeeded
-		if (condType == apiv1.JobFailed || condType == apiv1.JobSucceeded) && c.Type == apiv1.JobRunning {
+		// Set the running condition status to be false when current condition failed, succeeded or suspended
+		if (condType == apiv1.JobFailed || condType == apiv1.JobSucceeded ||
+			condType == apiv1.JobSuspended) && c.Type == apiv1.JobRunning {
 			c.Status = v1.ConditionFalse
 		}
 
