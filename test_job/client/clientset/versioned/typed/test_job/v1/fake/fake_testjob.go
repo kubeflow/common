@@ -1,4 +1,4 @@
-// Copyright 2021 The Kubeflow Authors
+// Copyright 2022 The Kubeflow Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ func (c *FakeTestJobs) UpdateStatus(ctx context.Context, testJob *testjobv1.Test
 // Delete takes name of the testJob and deletes it. Returns an error if one occurs.
 func (c *FakeTestJobs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(testjobsResource, c.ns, name), &testjobv1.TestJob{})
+		Invokes(testing.NewDeleteActionWithOptions(testjobsResource, c.ns, name, opts), &testjobv1.TestJob{})
 
 	return err
 }
