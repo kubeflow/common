@@ -6,7 +6,6 @@ jobs:
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: on
-      GOFLAGS: "-mod=mod"
     defaults:
       run:
         working-directory: ${{ env.GOPATH }}/src/github.com/kubeflow/common

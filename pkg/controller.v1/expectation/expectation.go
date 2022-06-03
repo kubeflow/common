@@ -2,12 +2,13 @@ package expectation
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"sync/atomic"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/clock"
+	log "github.com/sirupsen/logrus"
+
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 )
 
 const (
