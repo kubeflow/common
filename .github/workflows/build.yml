@@ -33,6 +33,8 @@ jobs:
         ./hack/verify-codegen.sh
         go build ./...
         go fmt ./...
+      env:
+        GOFLAGS="-mod=mod"
 
     - name: Install dependencies
       run: |
