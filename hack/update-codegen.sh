@@ -99,7 +99,7 @@ ${GOPATH}/bin/defaulter-gen --input-dirs github.com/kubeflow/common/test_job/api
 --output-base "${TEMP_DIR}" 
 
 echo "Building openapi-gen"
-go build -o ${GOPATH}/bin/openapi-gen ${OPENAPI_PKG}/cmd/openapi-gen
+GOFLAGS=-mod=mod go build -o ${GOPATH}/bin/openapi-gen ${OPENAPI_PKG}/cmd/openapi-gen
 
 echo "Generating OpenAPI specification for common/v1"
 ${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/pkg/apis/common/v1 \
