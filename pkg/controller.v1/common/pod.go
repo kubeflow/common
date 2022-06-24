@@ -428,7 +428,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 			logger.Warning(errMsg)
 			jc.Recorder.Event(runtimeObject, v1.EventTypeWarning, podTemplateSchedulerNameReason, errMsg)
 		}
-		jc.PodGroupControl.DecoratePodTemplateSpec(podTemplate, metaObject)
+		jc.PodGroupControl.DecoratePodTemplateSpec(podTemplate, metaObject, rt)
 	}
 
 	// Creation is expected when there is no error returned

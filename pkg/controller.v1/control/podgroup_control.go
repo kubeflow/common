@@ -19,18 +19,16 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/types"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
+	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
 	volcanoclient "volcano.sh/apis/pkg/client/clientset/versioned"
 )
+
+// volcanoTaskSpecKey task spec key used in pod annotation when EnableGangScheduling is true
+const volcanoTaskSpecKey = "volcano.sh/task-spec"
 
 // PodGroupControlInterface is an interface that knows how to add or delete PodGroups
 // created as an interface to allow testing.
@@ -47,7 +45,7 @@ type PodGroupControlInterface interface {
 	DelayPodCreationDueToPodGroup(pg metav1.Object) bool
 	// DecoratePodTemplateSpec decorates PodTemplateSpec.
 	// If the PodTemplateSpec has SchedulerName set, this method will Not override
-	DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object)
+	DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object, rtype string)
 	// GetSchedulerName returns the name of the gang scheduler
 	GetSchedulerName() string
 }
@@ -61,7 +59,7 @@ func (v *VolcanoControl) GetSchedulerName() string {
 	return "volcano"
 }
 
-func (v *VolcanoControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object) {
+func (v *VolcanoControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object, rtype string) {
 	if pts.Spec.SchedulerName == "" {
 		pts.Spec.SchedulerName = v.GetSchedulerName()
 	}
@@ -69,6 +67,7 @@ func (v *VolcanoControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, jo
 		pts.Annotations = map[string]string{}
 	}
 	pts.Annotations[v1beta1.KubeGroupNameAnnotationKey] = job.GetName()
+	pts.Annotations[volcanoTaskSpecKey] = rtype
 }
 
 // NewVolcanoControl returns a VolcanoControl
@@ -127,7 +126,7 @@ type SchedulerPluginsControl struct {
 	Client client.Client
 }
 
-func (s *SchedulerPluginsControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object) {
+func (s *SchedulerPluginsControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object, rtype string) {
 	if pts.Spec.SchedulerName == "" {
 		pts.Spec.SchedulerName = s.GetSchedulerName()
 	}
