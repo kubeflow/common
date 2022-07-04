@@ -95,7 +95,11 @@ func (jc *JobController) ReconcileJobs(
 	}
 
 	oldStatus := jobStatus.DeepCopy()
-	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) {
+	jobSuspended, err := jc.Controller.JobSuspended(job)
+	if err != nil {
+		return err
+	}
+	if commonutil.IsSucceeded(jobStatus) || commonutil.IsFailed(jobStatus) || (jobSuspended != nil && *jobSuspended) {
 		// If the Job is succeed or failed, delete all pods and services.
 		if err := jc.DeletePodsAndServices(runPolicy, job, pods); err != nil {
 			return err
@@ -356,4 +360,9 @@ func (jc *JobController) CleanupJob(runPolicy *apiv1.RunPolicy, jobStatus apiv1.
 
 func (jc *JobController) calcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) *v1.ResourceList {
 	return CalcPGMinResources(minMember, replicas, jc.PriorityClassLister.Get)
+}
+
+func (jc *JobController) JobSuspended(job interface{}) (*bool, error) {
+	log.Infof("Not implemented.")
+	return nil, nil
 }
