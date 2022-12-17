@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,7 +65,7 @@ type ReplicaStatus struct {
 	// A label selector is a label query over a set of resources. The result of matchLabels and
 	// matchExpressions are ANDed. An empty label selector matches all objects. A null
 	// label selector matches no objects.
-	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	LabelSelector string `json:"labelSelector,omitempty"`
 }
 
 // +k8s:openapi-gen=true
