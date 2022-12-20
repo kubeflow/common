@@ -17,14 +17,9 @@ func FilterPodsForReplicaType(pods []*v1.Pod, replicaType string) ([]*v1.Pod, er
 		apiv1.ReplicaTypeLabel: replicaType,
 	})
 
-	// TODO(#149): Remove deprecated selector.
-	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabelDeprecated: replicaType,
-	})
-
 	for _, pod := range pods {
 		set := labels.Set(pod.Labels)
-		if !selector.Matches(set) && !deprecatedSelector.Matches(set) {
+		if !selector.Matches(set) {
 			continue
 		}
 		result = append(result, pod)

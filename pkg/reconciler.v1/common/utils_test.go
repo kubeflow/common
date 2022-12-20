@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
 
 	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
 )
@@ -33,10 +32,8 @@ func TestGenLabels(t *testing.T) {
 			return tc{
 				testJobName: "test/job1",
 				expectedLabel: map[string]string{
-					commonv1.GroupNameLabelDeprecated: testjobv1.GroupName,
-					commonv1.JobNameLabel:             "test-job1",
-					commonv1.JobNameLabelDeprecated:   "test-job1",
-					commonv1.OperatorNameLabel:        "Test Reconciler",
+					commonv1.JobNameLabel:      "test-job1",
+					commonv1.OperatorNameLabel: "Test Reconciler",
 				},
 			}
 		}(),

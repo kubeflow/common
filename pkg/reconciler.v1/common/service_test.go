@@ -56,12 +56,10 @@ func TestCreateNewService(t *testing.T) {
 					},
 					ClusterIP: corev1.ClusterIPNone,
 					Selector: map[string]string{
-						commonv1.GroupNameLabelDeprecated: testjobv1.GroupName,
-						commonv1.OperatorNameLabel:        "Test Reconciler",
-						commonv1.JobNameLabelDeprecated:   jobName,
-						commonv1.JobNameLabel:             jobName,
-						commonv1.ReplicaTypeLabel:         strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
-						commonv1.ReplicaIndexLabel:        idx,
+						commonv1.OperatorNameLabel: "Test Reconciler",
+						commonv1.JobNameLabel:      jobName,
+						commonv1.ReplicaTypeLabel:  strings.ToLower(string(testjobv1.TestReplicaTypeWorker)),
+						commonv1.ReplicaIndexLabel: idx,
 					},
 				},
 			}

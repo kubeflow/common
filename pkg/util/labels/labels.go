@@ -21,15 +21,10 @@ import (
 	v1 "github.com/kubeflow/common/pkg/apis/common/v1"
 )
 
-// TODO(#149): Remove deprecated labels.
-
 func ReplicaIndex(labels map[string]string) (int, error) {
 	v, ok := labels[v1.ReplicaIndexLabel]
 	if !ok {
-		v, ok = labels[v1.ReplicaIndexLabelDeprecated]
-		if !ok {
-			return 0, errors.New("replica index label not found")
-		}
+		return 0, errors.New("replica index label not found")
 	}
 	return strconv.Atoi(v)
 }
@@ -40,31 +35,25 @@ func SetReplicaIndex(labels map[string]string, idx int) {
 
 func SetReplicaIndexStr(labels map[string]string, idx string) {
 	labels[v1.ReplicaIndexLabel] = idx
-	labels[v1.ReplicaIndexLabelDeprecated] = idx
 }
 
 func ReplicaType(labels map[string]string) (v1.ReplicaType, error) {
 	v, ok := labels[v1.ReplicaTypeLabel]
 	if !ok {
-		v, ok = labels[v1.ReplicaTypeLabelDeprecated]
-		if !ok {
-			return "", errors.New("replica type label not found")
-		}
+		return "", errors.New("replica type label not found")
 	}
 	return v1.ReplicaType(v), nil
 }
 
 func SetReplicaType(labels map[string]string, rt string) {
 	labels[v1.ReplicaTypeLabel] = rt
-	labels[v1.ReplicaTypeLabelDeprecated] = rt
 }
 
 func HasKnownLabels(labels map[string]string, groupName string) bool {
 	_, has := labels[v1.OperatorNameLabel]
-	return has || labels[v1.GroupNameLabelDeprecated] == groupName
+	return has
 }
 
 func SetJobRole(labels map[string]string, role string) {
 	labels[v1.JobRoleLabel] = role
-	labels[v1.JobRoleLabelDeprecated] = role
 }

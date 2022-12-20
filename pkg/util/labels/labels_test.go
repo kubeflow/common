@@ -20,7 +20,7 @@ func TestReplicaIndex(t *testing.T) {
 		},
 		"old": {
 			labels: map[string]string{
-				v1.ReplicaIndexLabelDeprecated: "3",
+				v1.ReplicaIndexLabel: "3",
 			},
 			want: 3,
 		},
@@ -30,8 +30,7 @@ func TestReplicaIndex(t *testing.T) {
 		},
 		"both": {
 			labels: map[string]string{
-				v1.ReplicaIndexLabel:           "4",
-				v1.ReplicaIndexLabelDeprecated: "5",
+				v1.ReplicaIndexLabel: "4",
 			},
 			want: 4,
 		},
@@ -63,7 +62,7 @@ func TestReplicaType(t *testing.T) {
 		},
 		"old": {
 			labels: map[string]string{
-				v1.ReplicaTypeLabelDeprecated: "Bar",
+				v1.ReplicaTypeLabel: "Bar",
 			},
 			want: "Bar",
 		},
@@ -73,8 +72,7 @@ func TestReplicaType(t *testing.T) {
 		},
 		"both": {
 			labels: map[string]string{
-				v1.ReplicaTypeLabel:           "Baz",
-				v1.ReplicaTypeLabelDeprecated: "Foo",
+				v1.ReplicaTypeLabel: "Baz",
 			},
 			want: "Baz",
 		},

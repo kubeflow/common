@@ -102,11 +102,8 @@ func (r *JobReconciler) OverrideForJobInterface(ui ReconcilerUtilInterface, pi P
 func (r *JobReconciler) GenLabels(jobName string) map[string]string {
 	jobName = strings.Replace(jobName, "/", "-", -1)
 	return map[string]string{
-		// TODO(#149): Remove deprecated labels.
-		commonv1.OperatorNameLabel:        r.GetReconcilerName(),
-		commonv1.GroupNameLabelDeprecated: r.GetGroupNameLabelValue(),
-		commonv1.JobNameLabel:             jobName,
-		commonv1.JobNameLabelDeprecated:   jobName,
+		commonv1.OperatorNameLabel: r.GetReconcilerName(),
+		commonv1.JobNameLabel:      jobName,
 	}
 }
 
