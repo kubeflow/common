@@ -97,14 +97,17 @@ ${GOPATH}/bin/defaulter-gen --input-dirs github.com/kubeflow/common/test_job/api
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 
+echo "Building openapi-gen"
+GOFLAGS=-mod=mod go build -o ${GOPATH}/bin/openapi-gen ${OPENAPI_PKG}/cmd/openapi-gen
+
 echo "Generating OpenAPI specification for common/v1"
-go run ${OPENAPI_PKG}/cmd/openapi-gen/main.go --input-dirs github.com/kubeflow/common/pkg/apis/common/v1 \
+${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/pkg/apis/common/v1 \
 --output-package github.com/kubeflow/common/pkg/apis/common/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 
 echo "Generating OpenAPI specification for test_job/v1"
-go run ${OPENAPI_PKG}/cmd/openapi-gen/main.go --input-dirs github.com/kubeflow/common/test_job/apis/test_job/v1 \
+${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/test_job/apis/test_job/v1 \
 --output-package github.com/kubeflow/common/test_job/apis/test_job/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
