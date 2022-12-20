@@ -37,7 +37,7 @@ jobs:
     - name: Install dependencies
       run: |
         # get coveralls.io support
-        go get github.com/mattn/goveralls
+        go install github.com/mattn/goveralls@latest
         # Install golangci-lint
         curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 
