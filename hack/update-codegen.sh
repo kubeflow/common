@@ -60,6 +60,7 @@ cleanup() {
 trap "cleanup" EXIT SIGINT
 
 echo ">> Temporary output directory ${TEMP_DIR}"
+
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
