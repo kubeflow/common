@@ -78,10 +78,11 @@ type JobControllerConfiguration struct {
 // reconcile logic of the job controller
 //
 // ReconcileJobs(
-//		job interface{},
-//		replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec,
-//		jobStatus apiv1.JobStatus,
-//		runPolicy *apiv1.RunPolicy) error
+//
+//	job interface{},
+//	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec,
+//	jobStatus apiv1.JobStatus,
+//	runPolicy *apiv1.RunPolicy) error
 type JobController struct {
 	Controller apiv1.ControllerInterface
 
@@ -209,11 +210,8 @@ func (jc *JobController) GenOwnerReference(obj metav1.Object) *metav1.OwnerRefer
 func (jc *JobController) GenLabels(jobName string) map[string]string {
 	jobName = strings.Replace(jobName, "/", "-", -1)
 	return map[string]string{
-		// TODO(#149): Remove deprecated labels.
-		apiv1.OperatorNameLabel:        jc.Controller.ControllerName(),
-		apiv1.GroupNameLabelDeprecated: jc.Controller.GetGroupNameLabelValue(),
-		apiv1.JobNameLabel:             jobName,
-		apiv1.JobNameLabelDeprecated:   jobName,
+		apiv1.OperatorNameLabel: jc.Controller.ControllerName(),
+		apiv1.JobNameLabel:      jobName,
 	}
 }
 
@@ -270,8 +268,7 @@ func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) 
 			MinAvailable: &minAvailable,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					// TODO(#149): Change for JobNameLabel after some releases.
-					apiv1.JobNameLabelDeprecated: job.GetName(),
+					apiv1.JobNameLabel: job.GetName(),
 				},
 			},
 		},

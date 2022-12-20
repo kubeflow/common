@@ -18,14 +18,9 @@ func FilterServicesForReplicaType(services []*v1.Service, replicaType string) ([
 		apiv1.ReplicaTypeLabel: replicaType,
 	})
 
-	// TODO(#149): Remove deprecated selector.
-	deprecatedSelector := labels.SelectorFromValidatedSet(labels.Set{
-		apiv1.ReplicaTypeLabelDeprecated: replicaType,
-	})
-
 	for _, service := range services {
 		set := labels.Set(service.Labels)
-		if !selector.Matches(set) && !deprecatedSelector.Matches(set) {
+		if !selector.Matches(set) {
 			continue
 		}
 		result = append(result, service)
