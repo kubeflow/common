@@ -270,7 +270,7 @@ func (jc *JobController) ReconcileJobs(
 
 		// Diff current active pods/services with replicas.
 		for rtype, spec := range replicas {
-			err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas)
+			err := jc.Controller.ReconcilePods(metaObject, &jobStatus, pods, rtype, spec, replicas, runPolicy)
 			if err != nil {
 				log.Warnf("ReconcilePods error %v", err)
 				return err

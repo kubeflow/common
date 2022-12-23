@@ -277,6 +277,13 @@ func schema_pkg_apis_common_v1_RunPolicy(ref common.ReferenceCallback) common.Op
 							Ref:         ref("github.com/kubeflow/common/pkg/apis/common/v1.SchedulingPolicy"),
 						},
 					},
+					"suspend": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Suspend specifies whether the Job controller should create Pods or not. If a Job is created with suspend set to true, no Pods are created by the Job controller. If a Job is suspended after creation (i.e. the flag goes from false to true), the Job controller will delete all active Pods associated with this Job. Users must design their workload to gracefully handle this. Suspending a Job will reset the StartTime field of the Job, effectively resetting the ActiveDeadlineSeconds timer too. This is an alpha field and requires the SuspendJob feature gate to be enabled; otherwise this field may not be set to true. Defaults to false.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

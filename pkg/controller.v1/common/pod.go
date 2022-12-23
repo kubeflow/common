@@ -274,7 +274,8 @@ func (jc *JobController) ReconcilePods(
 	pods []*v1.Pod,
 	rType apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec,
-	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
+	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec,
+	runPolicy *apiv1.RunPolicy) error {
 
 	rt := strings.ToLower(string(rType))
 	metaObject, ok := job.(metav1.Object)
@@ -317,6 +318,10 @@ func (jc *JobController) ReconcilePods(
 		} else if len(podSlice) == 0 {
 			logger.Infof("Need to create new pod: %s-%d", rt, index)
 
+			if JobSuspended(runPolicy) || commonutil.IsSuspended(*jobStatus) {
+				logger.Warningf("job is Suspended %s/%s", metaObject.GetNamespace(), metaObject.GetName())
+				continue
+			}
 			// check if this replica is the master role
 			masterRole = jc.Controller.IsMasterRole(replicas, rType, index)
 			err = jc.createNewPod(job, rt, index, spec, masterRole, replicas)
@@ -328,7 +333,7 @@ func (jc *JobController) ReconcilePods(
 			pod := podSlice[0]
 
 			// check if the index is in the valid range, if not, we should kill the pod
-			if index < 0 || index >= numReplicas {
+			if index < 0 || index >= numReplicas || JobSuspended(runPolicy) {
 				err = jc.PodControl.DeletePod(pod.Namespace, pod.Name, runtimeObject)
 				if err != nil {
 					return err

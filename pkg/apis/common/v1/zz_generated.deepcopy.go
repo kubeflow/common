@@ -158,6 +158,11 @@ func (in *RunPolicy) DeepCopyInto(out *RunPolicy) {
 		*out = new(SchedulingPolicy)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Suspend != nil {
+		in, out := &in.Suspend, &out.Suspend
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
