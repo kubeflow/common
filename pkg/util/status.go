@@ -15,8 +15,10 @@ const (
 	JobRunningReason = "JobRunning"
 	// JobFailedReason is added in a job when it is failed.
 	JobFailedReason = "JobFailed"
-	// JobRestarting is added in a job when it is restarting.
+	// JobRestartingReason is added in a job when it is restarting.
 	JobRestartingReason = "JobRestarting"
+	// JobFailedValidationReason is added in a job when it failed validation
+	JobFailedValidationReason = "JobFailedValidation"
 
 	// labels for pods and servers.
 
