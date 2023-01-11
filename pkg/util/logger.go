@@ -16,6 +16,7 @@ package util
 
 import (
 	"strings"
+	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -71,6 +72,22 @@ func LoggerForService(svc *v1.Service, kind string) *log.Entry {
 		"job":     job,
 		"service": svc.Namespace + "." + svc.Name,
 		"uid":     svc.ObjectMeta.UID,
+	})
+}
+
+func LoggerForPodGroup(pg *v1beta1.PodGroup, kind string) *log.Entry {
+	job := ""
+	if controllerRef := metav1.GetControllerOf(pg); controllerRef != nil {
+		if controllerRef.Kind == kind {
+			job = pg.Namespace + "." + controllerRef.Name
+		}
+	}
+	return log.WithFields(log.Fields{
+		// We use job to match the key used in controller.go
+		// In controller.go we log the key used with the workqueue.
+		"job":      job,
+		"podgroup": pg.Namespace + "." + pg.Name,
+		"uid":      pg.ObjectMeta.UID,
 	})
 }
 
