@@ -78,6 +78,10 @@ const (
 type JobControllerConfiguration struct {
 	// GangScheduling choice: None, volcano and scheduler-plugins
 	GangScheduling GangScheduler
+
+	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.
+	// Defaults to 1.
+	MaxConcurrentReconciles int
 }
 
 func (c *JobControllerConfiguration) EnableGangScheduling() bool {
@@ -187,6 +191,7 @@ var GenNonGangSchedulerSetupFunc = func() GangSchedulingSetupFunc {
 func NewJobController(
 	controllerImpl apiv1.ControllerInterface,
 	reconcilerSyncPeriod metav1.Duration,
+	maxConcurrentReconciles int,
 	kubeClientSet kubeclientset.Interface,
 	setupPodGroup GangSchedulingSetupFunc,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
@@ -208,9 +213,14 @@ func NewJobController(
 		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerImpl.ControllerName()}),
 	}
 
+	jobControllerConfig := JobControllerConfiguration{
+		GangScheduling:          GangSchedulerNone,
+		MaxConcurrentReconciles: maxConcurrentReconciles,
+	}
+
 	jc := JobController{
 		Controller:     controllerImpl,
-		Config:         JobControllerConfiguration{GangScheduling: GangSchedulerNone},
+		Config:         jobControllerConfig,
 		PodControl:     podControl,
 		ServiceControl: serviceControl,
 		KubeClientSet:  kubeClientSet,
