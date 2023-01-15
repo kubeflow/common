@@ -133,11 +133,7 @@ func NewSchedulerPluginsControl(c client.Client) PodGroupControlInterface {
 }
 
 func (s *SchedulerPluginsControl) DelayPodCreationDueToPodGroup(pg metav1.Object) bool {
-	if pg == nil {
-		return true
-	}
-	schedulerPluginPodGroup := pg.(*schedulerpluginsv1alpha1.PodGroup)
-	return len(schedulerPluginPodGroup.Status.Phase) == 0 || schedulerPluginPodGroup.Status.Phase == schedulerpluginsv1alpha1.PodGroupPending
+	return false
 }
 
 func (s *SchedulerPluginsControl) NewEmptyPodGroup() client.Object {
