@@ -69,6 +69,10 @@ type JobControllerConfiguration struct {
 
 	// Enable gang scheduling by volcano
 	EnableGangScheduling bool
+
+	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.
+	// Defaults to 1.
+	MaxConcurrentReconciles int
 }
 
 // JobController abstracts other operators to manage the lifecycle of Jobs.
@@ -152,6 +156,7 @@ func NewJobController(
 	controllerImpl apiv1.ControllerInterface,
 	reconcilerSyncPeriod metav1.Duration,
 	enableGangScheduling bool,
+	maxConcurrentReconciles int,
 	kubeClientSet kubeclientset.Interface,
 	volcanoClientSet volcanoclient.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
@@ -176,6 +181,7 @@ func NewJobController(
 	jobControllerConfig := JobControllerConfiguration{
 		ReconcilerSyncLoopPeriod: reconcilerSyncPeriod,
 		EnableGangScheduling:     enableGangScheduling,
+		MaxConcurrentReconciles:  maxConcurrentReconciles,
 	}
 
 	jc := JobController{
