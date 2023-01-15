@@ -190,6 +190,11 @@ func (in *SchedulingPolicy) DeepCopyInto(out *SchedulingPolicy) {
 			}
 		}
 	}
+	if in.ScheduleTimeoutSeconds != nil {
+		in, out := &in.ScheduleTimeoutSeconds, &out.ScheduleTimeoutSeconds
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

@@ -233,23 +233,24 @@ func (jc *JobController) ReconcileJobs(
 			minMember := totalReplicas
 			queue := ""
 			priorityClass := ""
+			var schedulerTimeout *int32
 			var minResources *corev1.ResourceList
 
 			if runPolicy.SchedulingPolicy != nil {
-				if runPolicy.SchedulingPolicy.MinAvailable != nil {
-					minMember = *runPolicy.SchedulingPolicy.MinAvailable
+				if minAvailable := runPolicy.SchedulingPolicy.MinAvailable; minAvailable != nil {
+					minMember = *minAvailable
 				}
-
-				if runPolicy.SchedulingPolicy.Queue != "" {
-					queue = runPolicy.SchedulingPolicy.Queue
+				if q := runPolicy.SchedulingPolicy.Queue; len(q) != 0 {
+					queue = q
 				}
-
-				if runPolicy.SchedulingPolicy.PriorityClass != "" {
-					priorityClass = runPolicy.SchedulingPolicy.PriorityClass
+				if pc := runPolicy.SchedulingPolicy.PriorityClass; len(pc) != 0 {
+					priorityClass = pc
 				}
-
-				if runPolicy.SchedulingPolicy.MinResources != nil {
-					minResources = runPolicy.SchedulingPolicy.MinResources
+				if mr := runPolicy.SchedulingPolicy.MinResources; mr != nil {
+					minResources = mr
+				}
+				if timeout := runPolicy.SchedulingPolicy.ScheduleTimeoutSeconds; timeout != nil {
+					schedulerTimeout = timeout
 				}
 			}
 
@@ -263,7 +264,7 @@ func (jc *JobController) ReconcileJobs(
 				pgSpecFill = func(pg metav1.Object) error {
 					volcanoPodGroup, match := pg.(*volcanov1beta1.PodGroup)
 					if !match {
-						return fmt.Errorf("unable recognize PodGroup: %v", klog.KObj(pg))
+						return fmt.Errorf("unable to recognize PodGroup: %v", klog.KObj(pg))
 					}
 					volcanoPodGroup.Spec = volcanov1beta1.PodGroupSpec{
 						MinMember:         minMember,
@@ -278,12 +279,12 @@ func (jc *JobController) ReconcileJobs(
 				pgSpecFill = func(pg metav1.Object) error {
 					schedulerPluginsPodGroup, match := pg.(*schedulerpluginsv1alpha1.PodGroup)
 					if !match {
-						return fmt.Errorf("unable recognize PodGroup: %v", klog.KObj(pg))
+						return fmt.Errorf("unable to recognize PodGroup: %v", klog.KObj(pg))
 					}
 					schedulerPluginsPodGroup.Spec = schedulerpluginsv1alpha1.PodGroupSpec{
 						MinMember:              minMember,
 						MinResources:           *minResources,
-						ScheduleTimeoutSeconds: nil,
+						ScheduleTimeoutSeconds: schedulerTimeout,
 					}
 					pg = schedulerPluginsPodGroup
 					return nil
