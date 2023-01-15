@@ -49,7 +49,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc FillPodGroupSp
 	toCreatePodGroup.SetNamespace(job.GetNamespace())
 	toCreatePodGroup.SetAnnotations(job.GetAnnotations())
 	toCreatePodGroup.SetOwnerReferences([]metav1.OwnerReference{*jc.GenOwnerReference(job)})
-	if err = specFunc(podGroup); err != nil {
+	if err = specFunc(toCreatePodGroup); err != nil {
 		return nil, fmt.Errorf("unable to fill the spec of PodGroup: %v", err)
 	}
 
