@@ -17,7 +17,10 @@ package control
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	commonutil "github.com/kubeflow/common/pkg/util"
+
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -27,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	"sync"
 )
 
 // Reasons for pod events

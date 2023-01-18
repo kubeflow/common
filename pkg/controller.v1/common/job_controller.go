@@ -1,34 +1,43 @@
+/*
+Copyright 2023 The Kubeflow Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package common
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"strings"
-
-	v1 "k8s.io/api/core/v1"
-	kubeinformers "k8s.io/client-go/informers"
-	kubeclientset "k8s.io/client-go/kubernetes"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	corelisters "k8s.io/client-go/listers/core/v1"
-	schedulinglisters "k8s.io/client-go/listers/scheduling/v1beta1"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	"github.com/kubeflow/common/pkg/controller.v1/control"
 	"github.com/kubeflow/common/pkg/controller.v1/expectation"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
-	policyapi "k8s.io/api/policy/v1beta1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	kubeinformers "k8s.io/client-go/informers"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	corelisters "k8s.io/client-go/listers/core/v1"
+	schedulinglisters "k8s.io/client-go/listers/scheduling/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"volcano.sh/apis/pkg/apis/scheduling/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	volcanoclient "volcano.sh/apis/pkg/client/clientset/versioned"
 )
 
@@ -57,18 +66,22 @@ var (
 	})
 )
 
+type GangScheduler string
+
+const (
+	GangSchedulerNone             GangScheduler = "None"
+	GangSchedulerVolcano          GangScheduler = "volcano"
+	GangSchedulerSchedulerPlugins GangScheduler = "scheduler-plugins"
+)
+
 // JobControllerConfiguration contains configuration of operator.
 type JobControllerConfiguration struct {
-	// ReconcilerSyncLoopPeriod is the amount of time the reconciler sync states loop
-	// wait between two reconciler sync.
-	// It is set to 15 sec by default.
-	// TODO(cph): maybe we can let it grows by multiple in the future
-	// and up to 5 minutes to reduce idle loop.
-	// e.g. 15s, 30s, 60s, 120s...
-	ReconcilerSyncLoopPeriod metav1.Duration
+	// GangScheduling choice: None, volcano and scheduler-plugins
+	GangScheduling GangScheduler
+}
 
-	// Enable gang scheduling by volcano
-	EnableGangScheduling bool
+func (c *JobControllerConfiguration) EnableGangScheduling() bool {
+	return c.GangScheduling != GangSchedulerNone
 }
 
 // JobController abstracts other operators to manage the lifecycle of Jobs.
@@ -88,17 +101,17 @@ type JobController struct {
 
 	Config JobControllerConfiguration
 
-	// podControl is used to add or delete pods.
+	// PodControl is used to add or delete pods.
 	PodControl control.PodControlInterface
 
-	// serviceControl is used to add or delete services.
+	// ServiceControl is used to add or delete services.
 	ServiceControl control.ServiceControlInterface
 
 	// KubeClientSet is a standard kubernetes clientset.
 	KubeClientSet kubeclientset.Interface
 
-	// VolcanoClientSet is a standard volcano clientset.
-	VolcanoClientSet volcanoclient.Interface
+	// PodGroupControl is used to add or delete PodGroup.
+	PodGroupControl control.PodGroupControlInterface
 
 	// PodLister can list/get pods from the shared informer's store.
 	PodLister corelisters.PodLister
@@ -148,12 +161,34 @@ type JobController struct {
 	Recorder record.EventRecorder
 }
 
+type GangSchedulingSetupFunc func(jc *JobController)
+
+var GenVolcanoSetupFunc = func(vci volcanoclient.Interface) GangSchedulingSetupFunc {
+	return func(jc *JobController) {
+		jc.Config.GangScheduling = GangSchedulerVolcano
+		jc.PodGroupControl = control.NewVolcanoControl(vci)
+	}
+}
+
+var GenSchedulerPluginsSetupFunc = func(c client.Client) GangSchedulingSetupFunc {
+	return func(jc *JobController) {
+		jc.Config.GangScheduling = GangSchedulerSchedulerPlugins
+		jc.PodGroupControl = control.NewSchedulerPluginsControl(c)
+	}
+}
+
+var GenNonGangSchedulerSetupFunc = func() GangSchedulingSetupFunc {
+	return func(jc *JobController) {
+		jc.Config.GangScheduling = GangSchedulerNone
+		jc.PodGroupControl = nil
+	}
+}
+
 func NewJobController(
 	controllerImpl apiv1.ControllerInterface,
 	reconcilerSyncPeriod metav1.Duration,
-	enableGangScheduling bool,
 	kubeClientSet kubeclientset.Interface,
-	volcanoClientSet volcanoclient.Interface,
+	setupPodGroup GangSchedulingSetupFunc,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	workQueueName string) JobController {
 
@@ -161,34 +196,31 @@ func NewJobController(
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerImpl.ControllerName()})
 
 	podControl := control.RealPodControl{
 		KubeClient: kubeClientSet,
-		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()}),
+		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerImpl.ControllerName()}),
 	}
 
 	serviceControl := control.RealServiceControl{
 		KubeClient: kubeClientSet,
-		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerImpl.ControllerName()}),
-	}
-
-	jobControllerConfig := JobControllerConfiguration{
-		ReconcilerSyncLoopPeriod: reconcilerSyncPeriod,
-		EnableGangScheduling:     enableGangScheduling,
+		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerImpl.ControllerName()}),
 	}
 
 	jc := JobController{
-		Controller:       controllerImpl,
-		Config:           jobControllerConfig,
-		PodControl:       podControl,
-		ServiceControl:   serviceControl,
-		KubeClientSet:    kubeClientSet,
-		VolcanoClientSet: volcanoClientSet,
-		Expectations:     expectation.NewControllerExpectations(),
-		WorkQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
-		Recorder:         recorder,
+		Controller:     controllerImpl,
+		Config:         JobControllerConfiguration{GangScheduling: GangSchedulerNone},
+		PodControl:     podControl,
+		ServiceControl: serviceControl,
+		KubeClientSet:  kubeClientSet,
+		Expectations:   expectation.NewControllerExpectations(),
+		WorkQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workQueueName),
+		Recorder:       recorder,
 	}
+
+	setupPodGroup(&jc)
+
 	return jc
 
 }
@@ -213,110 +245,6 @@ func (jc *JobController) GenLabels(jobName string) map[string]string {
 		apiv1.OperatorNameLabel: jc.Controller.ControllerName(),
 		apiv1.JobNameLabel:      jobName,
 	}
-}
-
-func (jc *JobController) SyncPodGroup(job metav1.Object, pgSpec v1beta1.PodGroupSpec) (*v1beta1.PodGroup, error) {
-
-	volcanoClientSet := jc.VolcanoClientSet
-	// Check whether podGroup exists or not
-	podGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
-	if err == nil {
-		return podGroup, nil
-	}
-
-	// create podGroup for gang scheduling by volcano
-	createPodGroup := &v1beta1.PodGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        job.GetName(),
-			Namespace:   job.GetNamespace(),
-			Annotations: job.GetAnnotations(),
-			OwnerReferences: []metav1.OwnerReference{
-				*jc.GenOwnerReference(job),
-			},
-		},
-		Spec: pgSpec,
-	}
-	createdPodGroup, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Create(context.TODO(), createPodGroup, metav1.CreateOptions{})
-	if err != nil {
-		return createdPodGroup, fmt.Errorf("unable to create PodGroup: %v", err)
-	}
-	createdPodGroupsCount.Inc()
-	return createdPodGroup, nil
-}
-
-// SyncPdb will create a PDB for gang scheduling by volcano.
-func (jc *JobController) SyncPdb(job metav1.Object, minAvailableReplicas int32) (*policyapi.PodDisruptionBudget, error) {
-	// Check the pdb exist or not
-	pdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
-	if err == nil || !k8serrors.IsNotFound(err) {
-		if err == nil {
-			err = errors.New(string(metav1.StatusReasonAlreadyExists))
-		}
-		return pdb, err
-	}
-
-	// Create pdb for gang scheduling by volcano
-	minAvailable := intstr.FromInt(int(minAvailableReplicas))
-	createPdb := &policyapi.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: job.GetName(),
-			OwnerReferences: []metav1.OwnerReference{
-				*jc.GenOwnerReference(job),
-			},
-		},
-		Spec: policyapi.PodDisruptionBudgetSpec{
-			MinAvailable: &minAvailable,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					apiv1.JobNameLabel: job.GetName(),
-				},
-			},
-		},
-	}
-	createdPdb, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Create(context.TODO(), createPdb, metav1.CreateOptions{})
-	if err != nil {
-		return createdPdb, fmt.Errorf("unable to create pdb: %v", err)
-	}
-	createdPDBCount.Inc()
-	return createdPdb, nil
-}
-
-func (jc *JobController) DeletePodGroup(job metav1.Object) error {
-	volcanoClientSet := jc.VolcanoClientSet
-
-	// Check whether podGroup exists or not
-	_, err := volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
-	if err != nil && k8serrors.IsNotFound(err) {
-		return nil
-	}
-
-	log.Infof("Deleting PodGroup %s", job.GetName())
-
-	// Delete podGroup
-	err = volcanoClientSet.SchedulingV1beta1().PodGroups(job.GetNamespace()).Delete(context.TODO(), job.GetName(), metav1.DeleteOptions{})
-	if err != nil {
-		return fmt.Errorf("unable to delete PodGroup: %v", err)
-	}
-	deletedPodGroupsCount.Inc()
-	return nil
-}
-
-func (jc *JobController) DeletePdb(job metav1.Object) error {
-
-	// Check whether pdb exists or not
-	_, err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Get(context.TODO(), job.GetName(), metav1.GetOptions{})
-	if err != nil && k8serrors.IsNotFound(err) {
-		return nil
-	}
-
-	msg := fmt.Sprintf("Deleting pdb %s", job.GetName())
-	log.Info(msg)
-
-	if err := jc.KubeClientSet.PolicyV1beta1().PodDisruptionBudgets(job.GetNamespace()).Delete(context.TODO(), job.GetName(), metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("unable to delete pdb: %v", err)
-	}
-	deletedPDBCount.Inc()
-	return nil
 }
 
 // resolveControllerRef returns the job referenced by a ControllerRef,

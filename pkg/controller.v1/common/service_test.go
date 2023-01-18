@@ -193,7 +193,6 @@ func TestJobController_CreateNewService(t *testing.T) {
 				PodControl:                  tt.fields.PodControl,
 				ServiceControl:              tt.fields.ServiceControl,
 				KubeClientSet:               tt.fields.KubeClientSet,
-				VolcanoClientSet:            tt.fields.VolcanoClientSet,
 				PodLister:                   tt.fields.PodLister,
 				ServiceLister:               tt.fields.ServiceLister,
 				PriorityClassLister:         tt.fields.PriorityClassLister,
