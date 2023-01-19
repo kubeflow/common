@@ -23,6 +23,7 @@ import (
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 
+	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
 	policyapi "k8s.io/api/policy/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,10 +42,14 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc FillPodGroupSp
 	podGroup, err := pgctl.GetPodGroup(job.GetNamespace(), job.GetName())
 	if err == nil {
 		// update podGroup for gang scheduling
+		oldPodGroup := podGroup
 		if err = specFunc(podGroup); err != nil {
 			return nil, fmt.Errorf("unable to fill the spec of PodGroup, '%v': %v", klog.KObj(podGroup), err)
 		}
-		return nil, pgctl.UpdatePodGroup(podGroup.(client.Object))
+		if diff := cmp.Diff(oldPodGroup, podGroup); len(diff) != 0 {
+			return podGroup, pgctl.UpdatePodGroup(podGroup.(client.Object))
+		}
+		return podGroup, nil
 	} else if client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("unable to get a PodGroup: %v", err)
 	} else {
