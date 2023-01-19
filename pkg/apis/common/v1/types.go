@@ -66,9 +66,9 @@ type ReplicaStatus struct {
 	// Deprecated: Use Selector instead
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 
-	// A label selector is a label query over a set of resources. The result of matchLabels and
-	// matchExpressions are ANDed. An empty label selector matches all objects. A null
-	// label selector matches no objects.
+	// A Selector is a label query over a set of resources. The result of matchLabels and
+	// matchExpressions are ANDed. An empty Selector matches all objects. A null
+	// Selector matches no objects.
 	Selector string `json:"selector,omitempty"`
 }
 
