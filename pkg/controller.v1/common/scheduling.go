@@ -42,7 +42,7 @@ func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc FillPodGroupSp
 	podGroup, err := pgctl.GetPodGroup(job.GetNamespace(), job.GetName())
 	if err == nil {
 		// update podGroup for gang scheduling
-		oldPodGroup := podGroup
+		oldPodGroup := &podGroup
 		if err = specFunc(podGroup); err != nil {
 			return nil, fmt.Errorf("unable to fill the spec of PodGroup, '%v': %v", klog.KObj(podGroup), err)
 		}
