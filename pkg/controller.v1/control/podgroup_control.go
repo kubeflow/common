@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	schedulerpluginsv1alpha1 "sigs.k8s.io/scheduler-plugins/apis/scheduling/v1alpha1"
 	volcanobatchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
@@ -33,20 +34,22 @@ import (
 // PodGroupControlInterface is an interface that knows how to add or delete PodGroups
 // created as an interface to allow testing.
 type PodGroupControlInterface interface {
-	// NewEmptyPodGroup returns an empty PodGroup
+	// NewEmptyPodGroup returns an empty PodGroup.
 	NewEmptyPodGroup() client.Object
-	// GetPodGroup gets the PodGroup identified by namespace and name
+	// GetPodGroup gets the PodGroup identified by namespace and name.
 	GetPodGroup(namespace string, name string) (metav1.Object, error)
 	// DeletePodGroup deletes the PodGroup identified by namespace and name.
 	DeletePodGroup(namespace string, name string) error
+	// UpdatePodGroup updates a PodGroup.
+	UpdatePodGroup(podGroup client.Object) error
 	// CreatePodGroup creates a new PodGroup with PodGroup spec fill function.
 	CreatePodGroup(podGroup client.Object) error
 	// DelayPodCreationDueToPodGroup determines whether it should delay Pod Creation.
 	DelayPodCreationDueToPodGroup(pg metav1.Object) bool
 	// DecoratePodTemplateSpec decorates PodTemplateSpec.
-	// If the PodTemplateSpec has SchedulerName set, this method will Not override
+	// If the PodTemplateSpec has SchedulerName set, this method will Not override.
 	DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object, rtype string)
-	// GetSchedulerName returns the name of the gang scheduler
+	// GetSchedulerName returns the name of the gang scheduler.
 	GetSchedulerName() string
 }
 
@@ -97,6 +100,15 @@ func (v *VolcanoControl) GetPodGroup(namespace string, name string) (metav1.Obje
 
 func (v *VolcanoControl) DeletePodGroup(namespace string, name string) error {
 	return v.Client.SchedulingV1beta1().PodGroups(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+func (v *VolcanoControl) UpdatePodGroup(podGroup client.Object) error {
+	pg := podGroup.(*volcanov1beta1.PodGroup)
+	_, err := v.Client.SchedulingV1beta1().PodGroups(pg.GetNamespace()).Update(context.TODO(), pg, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
+	}
+	return nil
 }
 
 func (v *VolcanoControl) CreatePodGroup(podGroup client.Object) error {
@@ -162,9 +174,22 @@ func (s *SchedulerPluginsControl) DeletePodGroup(namespace, name string) error {
 	return s.Client.Delete(ctx, pg)
 }
 
+func (s *SchedulerPluginsControl) UpdatePodGroup(podGroup client.Object) error {
+	pg := podGroup.(*schedulerpluginsv1alpha1.PodGroup)
+	err := s.Client.Update(context.TODO(), pg, &client.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
+	}
+	return nil
+}
+
 func (s *SchedulerPluginsControl) CreatePodGroup(podGroup client.Object) error {
-	ctx := context.TODO()
-	return s.Client.Create(ctx, podGroup)
+	pg := podGroup.(*schedulerpluginsv1alpha1.PodGroup)
+	err := s.Client.Create(context.TODO(), pg, &client.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to create a PodGroup, '%v': %v", klog.KObj(pg), err)
+	}
+	return nil
 }
 
 var _ PodGroupControlInterface = &SchedulerPluginsControl{}
