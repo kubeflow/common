@@ -231,7 +231,7 @@ func schema_pkg_apis_common_v1_ReplicaStatus(ref common.ReferenceCallback) commo
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.",
+							Description: "A Selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty Selector matches all objects. A null Selector matches no objects.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
