@@ -63,10 +63,13 @@ type ReplicaStatus struct {
 	// The number of pods which reached phase Failed.
 	Failed int32 `json:"failed,omitempty"`
 
+	// Deprecated: Use Selector instead
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+
 	// A label selector is a label query over a set of resources. The result of matchLabels and
 	// matchExpressions are ANDed. An empty label selector matches all objects. A null
 	// label selector matches no objects.
-	LabelSelector string `json:"labelSelector,omitempty"`
+	Selector string `json:"selector,omitempty"`
 }
 
 // +k8s:openapi-gen=true
