@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	schedulinglisters "k8s.io/client-go/listers/scheduling/v1beta1"
+	schedulinglisters "k8s.io/client-go/listers/scheduling/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"

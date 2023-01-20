@@ -22,7 +22,7 @@ import (
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/scheduling/v1beta1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,7 +103,7 @@ func AddResourceList(list, req, limit v1.ResourceList) {
 	}
 }
 
-type PriorityClassGetFunc func(string) (*v1beta1.PriorityClass, error)
+type PriorityClassGetFunc func(string) (*schedulingv1.PriorityClass, error)
 
 func CalcPGMinResources(minMember int32, replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec, pcGetFunc PriorityClassGetFunc) *v1.ResourceList {
 	var replicasPriority ReplicasPriority
