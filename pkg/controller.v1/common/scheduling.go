@@ -23,11 +23,13 @@ import (
 
 	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 
+	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
 	policyapi "k8s.io/api/policy/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,29 +37,38 @@ type FillPodGroupSpecFunc func(object metav1.Object) error
 
 func (jc *JobController) SyncPodGroup(job metav1.Object, specFunc FillPodGroupSpecFunc) (metav1.Object, error) {
 	pgctl := jc.PodGroupControl
+
 	// Check whether podGroup exists or not
 	podGroup, err := pgctl.GetPodGroup(job.GetNamespace(), job.GetName())
 	if err == nil {
+		// update podGroup for gang scheduling
+		oldPodGroup := &podGroup
+		if err = specFunc(podGroup); err != nil {
+			return nil, fmt.Errorf("unable to fill the spec of PodGroup, '%v': %v", klog.KObj(podGroup), err)
+		}
+		if diff := cmp.Diff(oldPodGroup, podGroup); len(diff) != 0 {
+			return podGroup, pgctl.UpdatePodGroup(podGroup.(client.Object))
+		}
 		return podGroup, nil
 	} else if client.IgnoreNotFound(err) != nil {
-		return nil, fmt.Errorf("unable to get PodGroup: %v", err)
-	}
+		return nil, fmt.Errorf("unable to get a PodGroup: %v", err)
+	} else {
+		// create podGroup for gang scheduling
+		newPodGroup := pgctl.NewEmptyPodGroup()
+		newPodGroup.SetName(job.GetName())
+		newPodGroup.SetNamespace(job.GetNamespace())
+		newPodGroup.SetAnnotations(job.GetAnnotations())
+		newPodGroup.SetOwnerReferences([]metav1.OwnerReference{*jc.GenOwnerReference(job)})
+		if err = specFunc(newPodGroup); err != nil {
+			return nil, fmt.Errorf("unable to fill the spec of PodGroup, '%v': %v", klog.KObj(newPodGroup), err)
+		}
 
-	// create podGroup for gang scheduling
-	toCreatePodGroup := pgctl.NewEmptyPodGroup()
-	toCreatePodGroup.SetName(job.GetName())
-	toCreatePodGroup.SetNamespace(job.GetNamespace())
-	toCreatePodGroup.SetAnnotations(job.GetAnnotations())
-	toCreatePodGroup.SetOwnerReferences([]metav1.OwnerReference{*jc.GenOwnerReference(job)})
-	if err = specFunc(toCreatePodGroup); err != nil {
-		return nil, fmt.Errorf("unable to fill the spec of PodGroup: %v", err)
+		err = pgctl.CreatePodGroup(newPodGroup)
+		if err != nil {
+			return podGroup, fmt.Errorf("unable to create PodGroup: %v", err)
+		}
+		createdPodGroupsCount.Inc()
 	}
-
-	err = pgctl.CreatePodGroup(toCreatePodGroup)
-	if err != nil {
-		return podGroup, fmt.Errorf("unable to create PodGroup: %v", err)
-	}
-	createdPodGroupsCount.Inc()
 
 	createdPodGroup, err := pgctl.GetPodGroup(job.GetNamespace(), job.GetName())
 	if err != nil {
