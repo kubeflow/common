@@ -23,7 +23,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/scheduling/v1beta1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -176,8 +176,8 @@ func (r *SchedulerFrameworkReconciler) calcPGMinResources(
 	replicas map[commonv1.ReplicaType]*commonv1.ReplicaSpec,
 ) *corev1.ResourceList {
 	return controllerv1.CalcPGMinResources(minMember, replicas,
-		func(pc string) (*v1beta1.PriorityClass, error) {
-			priorityClass := &v1beta1.PriorityClass{}
+		func(pc string) (*schedulingv1.PriorityClass, error) {
+			priorityClass := &schedulingv1.PriorityClass{}
 			err := r.Get(context.TODO(), types.NamespacedName{Name: pc}, priorityClass)
 			return priorityClass, err
 		})
