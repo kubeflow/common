@@ -125,10 +125,15 @@ var _ PodGroupControlInterface = &VolcanoControl{}
 
 // SchedulerPluginsControl is the  implementation of PodGroupControlInterface with scheduler-plugins.
 type SchedulerPluginsControl struct {
-	Client client.Client
+	Client        client.Client
+	SchedulerName string
 }
 
 func (s *SchedulerPluginsControl) DecoratePodTemplateSpec(pts *corev1.PodTemplateSpec, job metav1.Object, _ string) {
+	if len(pts.Spec.SchedulerName) == 0 {
+		pts.Spec.SchedulerName = s.GetSchedulerName()
+	}
+
 	if pts.Labels == nil {
 		pts.Labels = make(map[string]string)
 	}
@@ -136,12 +141,12 @@ func (s *SchedulerPluginsControl) DecoratePodTemplateSpec(pts *corev1.PodTemplat
 }
 
 func (s *SchedulerPluginsControl) GetSchedulerName() string {
-	return ""
+	return s.SchedulerName
 }
 
 // NewSchedulerPluginsControl returns a SchedulerPluginsControl
-func NewSchedulerPluginsControl(c client.Client) PodGroupControlInterface {
-	return &SchedulerPluginsControl{Client: c}
+func NewSchedulerPluginsControl(c client.Client, schedulerName string) PodGroupControlInterface {
+	return &SchedulerPluginsControl{Client: c, SchedulerName: schedulerName}
 }
 
 func (s *SchedulerPluginsControl) DelayPodCreationDueToPodGroup(pg metav1.Object) bool {

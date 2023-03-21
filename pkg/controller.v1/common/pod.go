@@ -421,7 +421,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 
 	// if gang-scheduling is enabled:
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
-	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "volcano".
+	// 2. if no SchedulerName is set for pods, we set the SchedulerName to gang-scheduler-name.
 	if jc.Config.EnableGangScheduling() {
 		if isCustomSchedulerSet(replicas, jc.PodGroupControl.GetSchedulerName()) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"

@@ -38,6 +38,7 @@ type SchedulerFrameworkReconciler struct {
 	BaseGangReconciler
 	ReconcilerUtilInterface
 	client.Client
+	SchedulerName string
 }
 
 func BareSchedulerFrameworkReconciler(client client.Client, bgReconciler *BaseGangReconciler, enabled bool) *SchedulerFrameworkReconciler {
@@ -57,9 +58,9 @@ func (r *SchedulerFrameworkReconciler) OverrideForGangSchedulingInterface(ui Rec
 	}
 }
 
-// GetGangSchedulerName returns the name of Gang Scheduler will be used, which is "" for SchedulerFrameworkReconciler
+// GetGangSchedulerName returns the name of Gang Scheduler will be used.
 func (r *SchedulerFrameworkReconciler) GetGangSchedulerName() string {
-	return ""
+	return r.SchedulerName
 }
 
 // GangSchedulingEnabled returns if gang-scheduling is enabled for all jobs
@@ -164,6 +165,10 @@ func (r *SchedulerFrameworkReconciler) DecoratePodForGangScheduling(
 	podTemplate *corev1.PodTemplateSpec,
 	job client.Object,
 ) {
+	if podTemplate.Spec.SchedulerName == "" {
+		podTemplate.Spec.SchedulerName = r.GetGangSchedulerName()
+	}
+
 	if podTemplate.Labels == nil {
 		podTemplate.Labels = make(map[string]string)
 	}
