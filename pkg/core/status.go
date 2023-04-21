@@ -34,6 +34,12 @@ func InitializeReplicaStatuses(jobStatus *apiv1.JobStatus, rtype apiv1.ReplicaTy
 func UpdateJobReplicaStatuses(jobStatus *apiv1.JobStatus, rtype apiv1.ReplicaType, pod *corev1.Pod) {
 	switch pod.Status.Phase {
 	case corev1.PodRunning:
+		if pod.DeletionTimestamp != nil {
+			// when node is not ready, the pod will be in terminating state.
+			// Count deleted Pods as failures to account for orphan Pods that
+			// never have a chance to reach the Failed phase.
+			jobStatus.ReplicaStatuses[rtype].Failed++
+		}
 		jobStatus.ReplicaStatuses[rtype].Active++
 	case corev1.PodSucceeded:
 		jobStatus.ReplicaStatuses[rtype].Succeeded++
