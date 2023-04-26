@@ -21,7 +21,7 @@ import (
 
 	commonutil "github.com/kubeflow/common/pkg/util"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,6 +129,9 @@ func GetPodFromTemplate(template *v1.PodTemplateSpec, parentObject runtime.Objec
 			Name:        template.Name,
 			Finalizers:  desiredFinalizers,
 		},
+	}
+	if template.GenerateName != "" {
+		pod.ObjectMeta.GenerateName = template.GenerateName
 	}
 	if controllerRef != nil {
 		pod.OwnerReferences = append(pod.OwnerReferences, *controllerRef)

@@ -396,7 +396,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 
 	idxStr := strconv.Itoa(index)
 	// Set name for the template.
-	podTemplate.Name = GenGeneralName(metaObject.GetName(), rt, idxStr)
+	podTemplate.GenerateName = GenGeneralNamePrefix(metaObject.GetName(), rt, idxStr)
 
 	if podTemplate.Labels == nil {
 		podTemplate.Labels = make(map[string]string)

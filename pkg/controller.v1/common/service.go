@@ -239,6 +239,7 @@ func (jc *JobController) CreateNewService(job metav1.Object, rtype apiv1.Replica
 		service.Spec.Ports = append(service.Spec.Ports, svcPort)
 	}
 
+	//service name can't use the generated name, tensorflow using svc name for discovery.
 	service.Name = GenGeneralName(job.GetName(), rt, index)
 	service.Labels = labels
 	// Create OwnerReference.
