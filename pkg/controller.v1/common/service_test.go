@@ -106,8 +106,7 @@ func TestJobController_CreateNewService(t *testing.T) {
 		index string
 	}
 
-	var replicas int32
-	replicas = 2
+	var replicas int32 = 2
 	tests := []struct {
 		name    string
 		fields  fields
