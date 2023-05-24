@@ -271,7 +271,7 @@ func (jc *JobController) ReconcilePods(
 	rType apiv1.ReplicaType,
 	spec *apiv1.ReplicaSpec,
 	replicas map[apiv1.ReplicaType]*apiv1.ReplicaSpec) error {
-
+	// Convert ReplicaType to lower string.
 	rt := strings.ToLower(string(rType))
 	metaObject, ok := job.(metav1.Object)
 	if !ok {
@@ -288,7 +288,6 @@ func (jc *JobController) ReconcilePods(
 	}
 	expectationPodsKey := expectation.GenExpectationPodsKey(jobKey, rt)
 
-	// Convert ReplicaType to lower string.
 	logger := commonutil.LoggerForReplica(metaObject, rt)
 	// Get all pods for the type rt.
 	pods, err = jc.FilterPodsForReplicaType(pods, rt)
