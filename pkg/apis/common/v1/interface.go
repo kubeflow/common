@@ -86,4 +86,7 @@ type ControllerInterface interface {
 	// It will requeue the job in case of an error while creating/deleting services.
 	// Common implementation will be provided and User can still override this to implement their own reconcile logic
 	ReconcileServices(job metav1.Object, services []*v1.Service, rtype ReplicaType, spec *ReplicaSpec) error
+
+	// JobSuspended checks jobs whether suspended or not
+	JobSuspended(job interface{}) (*bool, error)
 }
