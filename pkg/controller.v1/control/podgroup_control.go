@@ -106,7 +106,7 @@ func (v *VolcanoControl) UpdatePodGroup(podGroup client.Object) error {
 	pg := podGroup.(*volcanov1beta1.PodGroup)
 	_, err := v.Client.SchedulingV1beta1().PodGroups(pg.GetNamespace()).Update(context.TODO(), pg, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
+		return fmt.Errorf("HBSEO VolcanoControl unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
 	}
 	return nil
 }
@@ -178,7 +178,7 @@ func (s *SchedulerPluginsControl) UpdatePodGroup(podGroup client.Object) error {
 	pg := podGroup.(*schedulerpluginsv1alpha1.PodGroup)
 	err := s.Client.Update(context.TODO(), pg, &client.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
+		return fmt.Errorf("HBSEO VolcanoControl unable to update a PodGroup, '%v': %v", klog.KObj(pg), err)
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func (s *SchedulerPluginsControl) CreatePodGroup(podGroup client.Object) error {
 	pg := podGroup.(*schedulerpluginsv1alpha1.PodGroup)
 	err := s.Client.Create(context.TODO(), pg, &client.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("unable to create a PodGroup, '%v': %v", klog.KObj(pg), err)
+		return fmt.Errorf("HBSEO VolcanoControl unable to create a PodGroup, '%v': %v", klog.KObj(pg), err)
 	}
 	return nil
 }

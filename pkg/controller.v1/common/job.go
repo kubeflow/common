@@ -276,6 +276,8 @@ func (jc *JobController) ReconcileJobs(
 					return nil
 				}
 			case GangSchedulerSchedulerPlugins:
+			case GangSchedulerSchedulerPluginsSecond:
+			case GangSchedulerSchedulerPluginsDefault:
 				pgSpecFill = func(pg metav1.Object) error {
 					schedulerPluginsPodGroup, match := pg.(*schedulerpluginsv1alpha1.PodGroup)
 					if !match {

@@ -69,9 +69,11 @@ var (
 type GangScheduler string
 
 const (
-	GangSchedulerNone             GangScheduler = "None"
-	GangSchedulerVolcano          GangScheduler = "volcano"
-	GangSchedulerSchedulerPlugins GangScheduler = "scheduler-plugins"
+	GangSchedulerNone                    GangScheduler = "None"
+	GangSchedulerVolcano                 GangScheduler = "volcano"
+	GangSchedulerSchedulerPlugins        GangScheduler = "scheduler-plugins"
+	GangSchedulerSchedulerPluginsSecond  GangScheduler = "scheduler-plugins"
+	GangSchedulerSchedulerPluginsDefault GangScheduler = "default-scheduler"
 )
 
 // JobControllerConfiguration contains configuration of operator.
