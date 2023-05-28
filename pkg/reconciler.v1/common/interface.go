@@ -17,7 +17,7 @@ package common
 import (
 	"context"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"

@@ -1,4 +1,4 @@
-module github.com/kubeflow/common
+module github.com/jazzsir/common
 
 go 1.19
 

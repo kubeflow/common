@@ -38,12 +38,12 @@ go fmt ./...
 
 ### Code from upstream Kubernetes
 
-Some of the code is borrowed from upstream Kubernetes, such as [controller_utils.go](https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go), which helps us remove the direct dependency on Kubernetes. For more background on this, please check out the discussions in [issue #48](https://github.com/kubeflow/common/issues/48). In addition, the following folders also contain some auxiliary codes to help us easily build the operators:
+Some of the code is borrowed from upstream Kubernetes, such as [controller_utils.go](https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go), which helps us remove the direct dependency on Kubernetes. For more background on this, please check out the discussions in [issue #48](https://github.com/jazzsir/common/issues/48). In addition, the following folders also contain some auxiliary codes to help us easily build the operators:
 
 - [control](./pkg/controller.v1/control)
 - [expectation](./pkg/controller.v1/expectation)
 
-*Note: Please don't edit these files. If you encounter any issues, please file an issue [here](https://github.com/kubeflow/common/issues).*
+*Note: Please don't edit these files. If you encounter any issues, please file an issue [here](https://github.com/jazzsir/common/issues).*
 
 We have a long-term plan to move them to [kubernetes/client-go](https://github.com/kubernetes/client-go). See issue [kubernetes/client-go/issues/332](https://github.com/kubernetes/client-go/issues/332) for more details.
 

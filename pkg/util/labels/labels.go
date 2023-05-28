@@ -18,7 +18,7 @@ import (
 	"errors"
 	"strconv"
 
-	v1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	v1 "github.com/jazzsir/common/pkg/apis/common/v1"
 )
 
 func ReplicaIndex(labels map[string]string) (int, error) {

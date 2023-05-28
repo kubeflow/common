@@ -19,9 +19,9 @@ import (
 	"strconv"
 	"strings"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/core"
-	commonutil "github.com/kubeflow/common/pkg/util"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/core"
+	commonutil "github.com/jazzsir/common/pkg/util"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

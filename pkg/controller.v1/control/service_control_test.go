@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	utiltesting "k8s.io/client-go/util/testing"
 
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
+	testutilv1 "github.com/jazzsir/common/test_job/test_util/v1"
 )
 
 func TestCreateService(t *testing.T) {

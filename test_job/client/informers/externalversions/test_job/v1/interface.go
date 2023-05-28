@@ -17,7 +17,7 @@
 package v1
 
 import (
-	internalinterfaces "github.com/kubeflow/common/test_job/client/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/jazzsir/common/test_job/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

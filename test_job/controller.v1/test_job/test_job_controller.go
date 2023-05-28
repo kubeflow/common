@@ -1,8 +1,8 @@
 package test_job
 
 import (
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	v1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -17,9 +17,9 @@ limitations under the License.
 package core
 
 import (
-	utillabels "github.com/kubeflow/common/pkg/util/labels"
+	utillabels "github.com/jazzsir/common/pkg/util/labels"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"

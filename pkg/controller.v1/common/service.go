@@ -18,12 +18,12 @@ import (
 	"strconv"
 	"strings"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/controller.v1/control"
-	"github.com/kubeflow/common/pkg/controller.v1/expectation"
-	"github.com/kubeflow/common/pkg/core"
-	commonutil "github.com/kubeflow/common/pkg/util"
-	utillabels "github.com/kubeflow/common/pkg/util/labels"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/controller.v1/control"
+	"github.com/jazzsir/common/pkg/controller.v1/expectation"
+	"github.com/jazzsir/common/pkg/core"
+	commonutil "github.com/jazzsir/common/pkg/util"
+	utillabels "github.com/jazzsir/common/pkg/util/labels"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

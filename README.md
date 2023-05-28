@@ -1,7 +1,7 @@
 # Kubeflow common for operators
 
-[![Build Status](https://github.com/kubeflow/common/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/kubeflow/common/actions/?query=workflow%3ABuild)
-[![Go Report Card](https://goreportcard.com/badge/github.com/kubeflow/common)](https://goreportcard.com/report/github.com/kubeflow/common)
+[![Build Status](https://github.com/jazzsir/common/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jazzsir/common/actions/?query=workflow%3ABuild)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jazzsir/common)](https://goreportcard.com/report/github.com/jazzsir/common)
 
 This repo contains the libraries for writing a custom job operators such as tf-operator and pytorch-operator.
 To write a custom operator, user need to do following steps
@@ -12,7 +12,7 @@ To write a custom operator, user need to do following steps
 
 ```go
 import (
-    commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+    commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 )
 
 // reuse commonv1 api in your type.go
@@ -28,7 +28,7 @@ TestReplicaSpecs map[TestReplicaType]*commonv1.ReplicaSpec `json:"testReplicaSpe
 ```
 - Instantiate a [JobController](pkg/controller.v1/common/job_controller.go) struct object and pass in the custom controller written in step 1 as a parameter
 ```go
-import "github.com/kubeflow/common/pkg/controller.v1/common"
+import "github.com/jazzsir/common/pkg/controller.v1/common"
 
 jobController := common.JobController {
     Controller: testJobController,

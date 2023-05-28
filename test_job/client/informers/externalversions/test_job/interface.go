@@ -17,8 +17,8 @@
 package test_job
 
 import (
-	internalinterfaces "github.com/kubeflow/common/test_job/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/kubeflow/common/test_job/client/informers/externalversions/test_job/v1"
+	internalinterfaces "github.com/jazzsir/common/test_job/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/jazzsir/common/test_job/client/informers/externalversions/test_job/v1"
 )
 
 // Interface provides access to each of this group's versions.

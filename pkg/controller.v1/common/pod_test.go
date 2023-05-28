@@ -17,10 +17,10 @@ package common
 import (
 	"testing"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/core"
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	v12 "github.com/kubeflow/common/test_job/test_util/v1"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/core"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	v12 "github.com/jazzsir/common/test_job/test_util/v1"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"

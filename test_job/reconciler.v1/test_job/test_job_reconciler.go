@@ -3,10 +3,10 @@ package test_job
 import (
 	"context"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	common_reconciler "github.com/kubeflow/common/pkg/reconciler.v1/common"
-	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	"github.com/kubeflow/common/test_job/client/clientset/versioned/scheme"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	common_reconciler "github.com/jazzsir/common/pkg/reconciler.v1/common"
+	v1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	"github.com/jazzsir/common/test_job/client/clientset/versioned/scheme"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"

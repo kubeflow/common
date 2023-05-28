@@ -17,7 +17,7 @@
 package fake
 
 import (
-	kubeflowv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	kubeflowv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	scheme "github.com/kubeflow/common/test_job/client/clientset/versioned/scheme"
+	v1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	scheme "github.com/jazzsir/common/test_job/client/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

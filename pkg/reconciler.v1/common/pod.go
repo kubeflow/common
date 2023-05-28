@@ -27,10 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/core"
-	commonutil "github.com/kubeflow/common/pkg/util"
-	trainutil "github.com/kubeflow/common/pkg/util/train"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/core"
+	commonutil "github.com/jazzsir/common/pkg/util"
+	trainutil "github.com/jazzsir/common/pkg/util/train"
 )
 
 // DefaultContainerName defines the default name for container in Pod

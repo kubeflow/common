@@ -28,9 +28,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/kubeflow/common/test_job/apis/test_job/v1.TestJob":     schema_test_job_apis_test_job_v1_TestJob(ref),
-		"github.com/kubeflow/common/test_job/apis/test_job/v1.TestJobList": schema_test_job_apis_test_job_v1_TestJobList(ref),
-		"github.com/kubeflow/common/test_job/apis/test_job/v1.TestJobSpec": schema_test_job_apis_test_job_v1_TestJobSpec(ref),
+		"github.com/jazzsir/common/test_job/apis/test_job/v1.TestJob":     schema_test_job_apis_test_job_v1_TestJob(ref),
+		"github.com/jazzsir/common/test_job/apis/test_job/v1.TestJobList": schema_test_job_apis_test_job_v1_TestJobList(ref),
+		"github.com/jazzsir/common/test_job/apis/test_job/v1.TestJobSpec": schema_test_job_apis_test_job_v1_TestJobSpec(ref),
 	}
 }
 
@@ -66,21 +66,21 @@ func schema_test_job_apis_test_job_v1_TestJob(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the desired behavior of the TestJob.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/kubeflow/common/test_job/apis/test_job/v1.TestJobSpec"),
+							Ref:         ref("github.com/jazzsir/common/test_job/apis/test_job/v1.TestJobSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the TestJob. This data may not be up to date. Populated by the system. Read-only.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/kubeflow/common/pkg/apis/common/v1.JobStatus"),
+							Ref:         ref("github.com/jazzsir/common/pkg/apis/common/v1.JobStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kubeflow/common/pkg/apis/common/v1.JobStatus", "github.com/kubeflow/common/test_job/apis/test_job/v1.TestJobSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/jazzsir/common/pkg/apis/common/v1.JobStatus", "github.com/jazzsir/common/test_job/apis/test_job/v1.TestJobSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -120,7 +120,7 @@ func schema_test_job_apis_test_job_v1_TestJobList(ref common.ReferenceCallback) 
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/kubeflow/common/test_job/apis/test_job/v1.TestJob"),
+										Ref:     ref("github.com/jazzsir/common/test_job/apis/test_job/v1.TestJob"),
 									},
 								},
 							},
@@ -131,7 +131,7 @@ func schema_test_job_apis_test_job_v1_TestJobList(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/kubeflow/common/test_job/apis/test_job/v1.TestJob", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"github.com/jazzsir/common/test_job/apis/test_job/v1.TestJob", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -144,7 +144,7 @@ func schema_test_job_apis_test_job_v1_TestJobSpec(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"runPolicy": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/kubeflow/common/pkg/apis/common/v1.RunPolicy"),
+							Ref: ref("github.com/jazzsir/common/pkg/apis/common/v1.RunPolicy"),
 						},
 					},
 					"testReplicaSpecs": {
@@ -154,7 +154,7 @@ func schema_test_job_apis_test_job_v1_TestJobSpec(ref common.ReferenceCallback) 
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/kubeflow/common/pkg/apis/common/v1.ReplicaSpec"),
+										Ref: ref("github.com/jazzsir/common/pkg/apis/common/v1.ReplicaSpec"),
 									},
 								},
 							},
@@ -165,6 +165,6 @@ func schema_test_job_apis_test_job_v1_TestJobSpec(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/kubeflow/common/pkg/apis/common/v1.ReplicaSpec", "github.com/kubeflow/common/pkg/apis/common/v1.RunPolicy"},
+			"github.com/jazzsir/common/pkg/apis/common/v1.ReplicaSpec", "github.com/jazzsir/common/pkg/apis/common/v1.RunPolicy"},
 	}
 }

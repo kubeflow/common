@@ -23,7 +23,7 @@ set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 echo ">> Script root ${SCRIPT_ROOT}"
-ROOT_PKG=github.com/kubeflow/common
+ROOT_PKG=github.com/jazzsir/common
 
 # Grab code-generator version from go.mod
 CODEGEN_VERSION=$(grep 'k8s.io/code-generator' go.mod | awk '{print $2}' | head -1)
@@ -67,13 +67,13 @@ echo ">> Temporary output directory ${TEMP_DIR}"
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 cd ${SCRIPT_ROOT}
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
- github.com/kubeflow/common/pkg/client github.com/kubeflow/common/pkg/apis \
+ github.com/jazzsir/common/pkg/client github.com/jazzsir/common/pkg/apis \
  common:v1 \
  --output-base "${TEMP_DIR}" \
  --go-header-file hack/boilerplate/boilerplate.go.txt
 
 ${CODEGEN_PKG}/generate-groups.sh "all" \
- github.com/kubeflow/common/test_job/client github.com/kubeflow/common/test_job/apis \
+ github.com/jazzsir/common/test_job/client github.com/jazzsir/common/test_job/apis \
  test_job:v1 \
  --output-base "${TEMP_DIR}" \
  --go-header-file hack/boilerplate/boilerplate.go.txt
@@ -85,16 +85,16 @@ ${CODEGEN_PKG}/generate-groups.sh "all" \
 #go build -o ${GOPATH}/bin/defaulter-gen ${CODEGEN_PKG}/cmd/defaulter-gen
 
 echo "Generating defaulters for common/v1"
-${GOPATH}/bin/defaulter-gen --input-dirs github.com/kubeflow/common/pkg/apis/common/v1 \
+${GOPATH}/bin/defaulter-gen --input-dirs github.com/jazzsir/common/pkg/apis/common/v1 \
 -O zz_generated.defaults \
---output-package github.com/kubeflow/common/pkg/apis/common/v1 \
+--output-package github.com/jazzsir/common/pkg/apis/common/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 
 echo "Generating defaulters for test_job/v1"
-${GOPATH}/bin/defaulter-gen --input-dirs github.com/kubeflow/common/test_job/apis/test_job/v1 \
+${GOPATH}/bin/defaulter-gen --input-dirs github.com/jazzsir/common/test_job/apis/test_job/v1 \
 -O zz_generated.defaults \
---output-package github.com/kubeflow/common/test_job/apis/test_job/v1 \
+--output-package github.com/jazzsir/common/test_job/apis/test_job/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 
@@ -102,14 +102,14 @@ echo "Building openapi-gen"
 GOFLAGS=-mod=mod go build -o ${GOPATH}/bin/openapi-gen ${OPENAPI_PKG}/cmd/openapi-gen
 
 echo "Generating OpenAPI specification for common/v1"
-${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/pkg/apis/common/v1 \
---output-package github.com/kubeflow/common/pkg/apis/common/v1 \
+${GOPATH}/bin/openapi-gen --input-dirs github.com/jazzsir/common/pkg/apis/common/v1 \
+--output-package github.com/jazzsir/common/pkg/apis/common/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 
 echo "Generating OpenAPI specification for test_job/v1"
-${GOPATH}/bin/openapi-gen --input-dirs github.com/kubeflow/common/test_job/apis/test_job/v1 \
---output-package github.com/kubeflow/common/test_job/apis/test_job/v1 \
+${GOPATH}/bin/openapi-gen --input-dirs github.com/jazzsir/common/test_job/apis/test_job/v1 \
+--output-package github.com/jazzsir/common/test_job/apis/test_job/v1 \
 --go-header-file hack/boilerplate/boilerplate.go.txt "$@" \
 --output-base "${TEMP_DIR}" 
 

@@ -15,7 +15,7 @@
 package control
 
 import (
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
+	testutilv1 "github.com/jazzsir/common/test_job/test_util/v1"
 	"reflect"
 	"testing"
 
@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 )
 
 func TestClaimPods(t *testing.T) {

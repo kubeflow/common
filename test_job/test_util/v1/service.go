@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 )
 
 func NewBaseService(name string, testJob *testjobv1.TestJob, t *testing.T) *v1.Service {

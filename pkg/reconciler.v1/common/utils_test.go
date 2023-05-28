@@ -17,9 +17,9 @@ package common_test
 import (
 	"testing"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 
-	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
+	"github.com/jazzsir/common/test_job/reconciler.v1/test_job"
 )
 
 func TestGenLabels(t *testing.T) {

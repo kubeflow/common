@@ -19,7 +19,7 @@ package labels
 import (
 	"testing"
 
-	v1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	v1 "github.com/jazzsir/common/pkg/apis/common/v1"
 )
 
 func TestReplicaIndex(t *testing.T) {

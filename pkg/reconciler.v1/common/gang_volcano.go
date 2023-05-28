@@ -17,10 +17,10 @@ package common
 import (
 	"context"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	controllerv1 "github.com/kubeflow/common/pkg/controller.v1/common"
-	commonutil "github.com/kubeflow/common/pkg/util"
-	"github.com/kubeflow/common/pkg/util/k8sutil"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	controllerv1 "github.com/jazzsir/common/pkg/controller.v1/common"
+	commonutil "github.com/jazzsir/common/pkg/util"
+	"github.com/jazzsir/common/pkg/util/k8sutil"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

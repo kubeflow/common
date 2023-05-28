@@ -3,13 +3,13 @@ package common
 import (
 	"testing"
 
-	"github.com/kubeflow/common/pkg/core"
+	"github.com/jazzsir/common/pkg/core"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/controller.v1/control"
-	"github.com/kubeflow/common/pkg/controller.v1/expectation"
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	testjob "github.com/kubeflow/common/test_job/controller.v1/test_job"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/controller.v1/control"
+	"github.com/jazzsir/common/pkg/controller.v1/expectation"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	testjob "github.com/jazzsir/common/test_job/controller.v1/test_job"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"

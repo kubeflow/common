@@ -16,7 +16,7 @@ package control
 
 import (
 	"fmt"
-	commonutil "github.com/kubeflow/common/pkg/util"
+	commonutil "github.com/jazzsir/common/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"sync"
 

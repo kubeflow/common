@@ -19,7 +19,7 @@ package fake
 import (
 	"context"
 
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

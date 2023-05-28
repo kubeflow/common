@@ -19,8 +19,8 @@ package v1
 import (
 	"net/http"
 
-	v1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	"github.com/kubeflow/common/test_job/client/clientset/versioned/scheme"
+	v1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	"github.com/jazzsir/common/test_job/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

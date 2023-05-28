@@ -18,7 +18,7 @@ import (
 	"net"
 	"os"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

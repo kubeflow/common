@@ -17,11 +17,11 @@ package v1
 import (
 	"time"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
 )
 
 func NewTestJob(worker int) *testjobv1.TestJob {

@@ -8,17 +8,17 @@ jobs:
       GO111MODULE: on
     defaults:
       run:
-        working-directory: ${{ env.GOPATH }}/src/github.com/kubeflow/common
+        working-directory: ${{ env.GOPATH }}/src/github.com/jazzsir/common
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 1
-        path: ${{ env.GOPATH }}/src/github.com/kubeflow/common
+        path: ${{ env.GOPATH }}/src/github.com/jazzsir/common
 
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
-        go-version-file: ${{ env.GOPATH }}/src/github.com/kubeflow/common/go.mod
+        go-version-file: ${{ env.GOPATH }}/src/github.com/jazzsir/common/go.mod
 
     - uses: actions/cache@v3
       with:

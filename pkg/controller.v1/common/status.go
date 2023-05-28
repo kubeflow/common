@@ -1,8 +1,8 @@
 package common
 
 import (
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/core"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/core"
 	corev1 "k8s.io/api/core/v1"
 )
 

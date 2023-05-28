@@ -3,7 +3,7 @@ package util
 import (
 	"testing"
 
-	apiv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	apiv1 "github.com/jazzsir/common/pkg/apis/common/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )

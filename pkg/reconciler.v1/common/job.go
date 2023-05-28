@@ -23,10 +23,10 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	"github.com/kubeflow/common/pkg/core"
-	commonutil "github.com/kubeflow/common/pkg/util"
-	"github.com/kubeflow/common/pkg/util/k8sutil"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	"github.com/jazzsir/common/pkg/core"
+	commonutil "github.com/jazzsir/common/pkg/util"
+	"github.com/jazzsir/common/pkg/util/k8sutil"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

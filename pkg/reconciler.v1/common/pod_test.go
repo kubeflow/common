@@ -17,10 +17,10 @@ package common_test
 import (
 	"testing"
 
-	commonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	testjobv1 "github.com/kubeflow/common/test_job/apis/test_job/v1"
-	"github.com/kubeflow/common/test_job/reconciler.v1/test_job"
-	testutilv1 "github.com/kubeflow/common/test_job/test_util/v1"
+	commonv1 "github.com/jazzsir/common/pkg/apis/common/v1"
+	testjobv1 "github.com/jazzsir/common/test_job/apis/test_job/v1"
+	"github.com/jazzsir/common/test_job/reconciler.v1/test_job"
+	testutilv1 "github.com/jazzsir/common/test_job/test_util/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
