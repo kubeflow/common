@@ -63,3 +63,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 vendor/
+
+## cscope
+tags
+cscope.*
